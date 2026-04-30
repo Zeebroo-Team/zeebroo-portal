@@ -1,0 +1,151 @@
+{
+  "user": [
+    {
+      "tab": "ui",
+      "key": "ui.theme",
+      "name": "Theme",
+      "type": "select",
+      "default": "night",
+      "options": [
+        { "label": "Night", "value": "night" },
+        { "label": "Light", "value": "light" },
+        { "label": "Ocean", "value": "ocean" }
+      ],
+      "required": true,
+      "description": "Default UI theme for this user.",
+      "placeholder": "Select theme",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "ui",
+      "key": "ui.language",
+      "name": "Language",
+      "type": "select",
+      "default": "en",
+      "options": [
+        { "label": "English", "value": "en" },
+        { "label": "Sinhala", "value": "si" },
+        { "label": "Tamil", "value": "ta" }
+      ],
+      "required": true,
+      "description": "Preferred language for this user.",
+      "placeholder": "Select language",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "notifications",
+      "key": "notifications.email",
+      "name": "Email Notifications",
+      "type": "checkbox",
+      "default": true,
+      "options": [],
+      "required": false,
+      "description": "Enable or disable email notifications.",
+      "placeholder": "",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "notifications",
+      "key": "notifications.sms",
+      "name": "SMS Notifications",
+      "type": "checkbox",
+      "default": false,
+      "options": [],
+      "required": false,
+      "description": "Enable or disable SMS notifications.",
+      "placeholder": "",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "dashboard",
+      "key": "dashboard.default_tab",
+      "name": "Default Dashboard Tab",
+      "type": "select",
+      "default": "overview",
+      "options": [
+        { "label": "Overview", "value": "overview" },
+        { "label": "Accounts", "value": "accounts" }
+      ],
+      "required": true,
+      "description": "Landing tab when user opens dashboard.",
+      "placeholder": "Select default tab",
+      "is_enabled": true,
+      "is_disabled": false
+    }
+  ],
+  "business": [
+    {
+      "tab": "business",
+      "key": "business.currency",
+      "name": "Currency",
+      "type": "select",
+      "default": "LKR",
+      "options": [
+        { "label": "LKR", "value": "LKR" },
+        { "label": "USD", "value": "USD" },
+        { "label": "EUR", "value": "EUR" }
+      ],
+      "required": true,
+      "description": "Default business currency.",
+      "placeholder": "Select currency",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "business",
+      "key": "business.timezone",
+      "name": "Timezone",
+      "type": "text",
+      "default": "Asia/Colombo",
+      "options": [],
+      "required": true,
+      "description": "Business timezone.",
+      "placeholder": "Enter timezone (e.g. Asia/Colombo)",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "invoice",
+      "key": "invoice.prefix",
+      "name": "Invoice Prefix",
+      "type": "text",
+      "default": "INV",
+      "options": [],
+      "required": true,
+      "description": "Prefix used for generated invoices.",
+      "placeholder": "Enter prefix",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "invoice",
+      "key": "invoice.next_number",
+      "name": "Next Invoice Number",
+      "type": "number",
+      "default": 1,
+      "options": [],
+      "required": true,
+      "description": "Next invoice sequence number.",
+      "placeholder": "Enter next number",
+      "is_enabled": true,
+      "is_disabled": false
+    },
+    {
+      "tab": "tax",
+      "key": "tax.enabled",
+      "name": "Enable Tax",
+      "type": "checkbox",
+      "default": false,
+      "options": [],
+      "required": false,
+      "description": "Enable tax calculations in this business.",
+      "placeholder": "",
+      "is_enabled": true,
+      "is_disabled": false
+    }
+  ]
+}

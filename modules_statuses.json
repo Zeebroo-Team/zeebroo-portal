@@ -2,5 +2,6 @@
     "Auth": true,
     "Theme": true,
     "Business": true,
-    "Account": true
+    "Account": true,
+    "Settings": true
 }

@@ -9,7 +9,7 @@ class BusinessService
 {
     public function upsertForUser(User $user, array $data): Business
     {
-        return Business::updateOrCreate(
+        $business = Business::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'name' => $data['name'],
@@ -17,5 +17,7 @@ class BusinessService
                 'description' => $data['description'] ?? null,
             ]
         );
+
+        return $business;
     }
 }
