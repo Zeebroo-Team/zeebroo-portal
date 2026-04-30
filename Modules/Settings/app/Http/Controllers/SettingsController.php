@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Modules\Settings\Services\SettingsService;
 
 class SettingsController extends Controller
@@ -100,6 +101,78 @@ class SettingsController extends Controller
         return redirect()->route($routeName)->with('status', 'Setting deleted successfully.');
     }
 
+    public function bulkStore(Request $request, SettingsService $settingsService)
+    {
+        $validated = $request->validate([
+            'scope' => ['required', 'in:user,business'],
+            'values' => ['nullable', 'array'],
+            'files' => ['nullable', 'array'],
+            'tab' => ['nullable', 'string'],
+        ]);
+
+        $user = $request->user();
+        $scope = $validated['scope'] === 'business'
+            ? $user?->businesses()->latest()->first()
+            : $user;
+
+        if (!$scope) {
+            return redirect()->back()->withErrors(['scope' => 'Business not found for this user.']);
+        }
+
+        $definitions = $this->getDefinitionsByScope($validated['scope'])
+            ->filter(fn (array $definition) => $definition['is_enabled'] && !$definition['is_disabled']);
+        $selectedTab = (string) ($validated['tab'] ?? 'all');
+        $definitions = $selectedTab === 'all'
+            ? $definitions
+            : $definitions->filter(fn (array $definition) => (string) ($definition['tab'] ?? 'general') === $selectedTab);
+        $existingSettings = $settingsService->allForScope($scope);
+        $uploadedFiles = $request->file('files', []);
+
+        $inputValues = (array) ($validated['values'] ?? []);
+        $inputFiles = (array) ($validated['files'] ?? []);
+        $toSave = [];
+
+        foreach ($definitions as $definition) {
+            $key = $definition['key'];
+            $existingValue = $existingSettings->get($key);
+
+            if ($definition['type'] === 'file') {
+                $uploadedFile = is_array($uploadedFiles) && array_key_exists($key, $uploadedFiles)
+                    ? $uploadedFiles[$key]
+                    : null;
+                if ($uploadedFile) {
+                    $value = $uploadedFile->store(
+                        "settings/{$validated['scope']}/{$scope->getKey()}",
+                        'public'
+                    );
+                } else {
+                    $value = $existingValue;
+                }
+            } else {
+                if (array_key_exists($key, $inputValues)) {
+                    $rawValue = $inputValues[$key];
+                } elseif ($definition['type'] === 'checkbox') {
+                    $rawValue = 0;
+                } else {
+                    $rawValue = $existingValue;
+                }
+                $value = $this->normalizeRawValue($rawValue, $definition);
+            }
+
+            if ($definition['required'] && ($value === null || $value === '')) {
+                return redirect()->back()->withErrors(['value' => "The {$definition['name']} field is required."]);
+            }
+
+            $toSave[$key] = $value;
+        }
+
+        $settingsService->setMany($scope, $toSave);
+
+        $routeName = $validated['scope'] === 'business' ? 'settings.business' : 'settings.user';
+
+        return redirect()->route($routeName)->with('status', 'All settings saved successfully.');
+    }
+
     private function renderSettingsPage(
         string $scopeType,
         ?Model $scopeModel,
@@ -182,11 +255,15 @@ class SettingsController extends Controller
 
     private function normalizeInputValue(Request $request, array $definition): mixed
     {
+        return $this->normalizeRawValue($request->input('value'), $definition);
+    }
+
+    private function normalizeRawValue(mixed $rawValue, array $definition): mixed
+    {
         $type = $definition['type'];
-        $rawValue = $request->input('value');
 
         if ($type === 'checkbox') {
-            return (bool) $request->boolean('value');
+            return filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
         }
 
         if ($type === 'number') {
@@ -202,6 +279,14 @@ class SettingsController extends Controller
             if ($allowed->isNotEmpty() && !$allowed->contains($rawValue)) {
                 return $definition['default'] ?? null;
             }
+        }
+
+        if ($type === 'file') {
+            if (is_string($rawValue) && $rawValue !== '' && Storage::disk('public')->exists($rawValue)) {
+                return $rawValue;
+            }
+
+            return null;
         }
 
         return $rawValue;
