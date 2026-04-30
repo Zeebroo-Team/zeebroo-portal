@@ -7,17 +7,17 @@
     <title>{{ $title ?? 'Overview' }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
     <style>
-        :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#9ca3af;--border:#334155;--primary:#7c3aed}
-        html[data-theme="light"]{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#4b5563;--border:#d1d5db;--primary:#2563eb}
-        html[data-theme="ocean"]{--bg:#082f49;--card:#0c4a6e;--text:#e0f2fe;--muted:#bae6fd;--border:#0369a1;--primary:#06b6d4}
+        :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#9ca3af;--border:#334155;--primary:#7c3aed;--btn-bg:#7c3aed;--btn-hover:#6d28d9}
+        html[data-theme="light"]{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#4b5563;--border:#d1d5db;--primary:#2563eb;--btn-bg:#111827;--btn-hover:#000}
+        html[data-theme="ocean"]{--bg:#082f49;--card:#0c4a6e;--text:#e0f2fe;--muted:#bae6fd;--border:#0369a1;--primary:#06b6d4;--btn-bg:#0891b2;--btn-hover:#0e7490}
         body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
-        .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
-        .sidebar{background:var(--card);border-right:1px solid var(--border);padding:24px 18px;position:sticky;top:0;align-self:start;height:100vh;overflow:auto}
+        .layout{min-height:100vh}
+        .sidebar{width:260px;background:var(--card);border-right:1px solid color-mix(in srgb, var(--border) 75%, #000);box-shadow:inset -1px 0 0 color-mix(in srgb, #fff 10%, transparent);padding:24px 18px;position:fixed;left:0;top:0;bottom:0;overflow:auto}
         .brand{font-weight:700;font-size:20px;margin-bottom:22px}
         .menu{display:flex;flex-direction:column;gap:8px}
         .menu a{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid transparent;border-radius:10px;text-decoration:none;color:var(--text)}
         .menu a.active,.menu a:hover{border-color:var(--border);background:color-mix(in srgb,var(--primary) 14%,transparent)}
-        .content{padding:0}
+        .content{padding:0;margin-left:297px;min-height:100vh}
         .navbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:20}
         .navtitle{font-weight:700}
         .navmeta{color:var(--muted);font-size:14px}
@@ -44,8 +44,9 @@
         .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:920px}
         .muted{color:var(--muted)}
         .chip{display:inline-block;border:1px solid var(--border);padding:6px 12px;border-radius:999px;margin:8px 8px 0 0}
-        button,.linkbtn{border:0;border-radius:10px;padding:10px 14px;background:var(--primary);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
-        @media (max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;border-right:0;border-bottom:1px solid var(--border)}}
+        button,.linkbtn{border:0;border-radius:10px;padding:10px 14px;background:var(--btn-bg);color:#fff;cursor:pointer;text-decoration:none;display:inline-block;transition:all .2s ease}
+        button:hover,.linkbtn:hover{background:var(--btn-hover);transform:translateY(-1px)}
+        @media (max-width:900px){.sidebar{position:static;width:auto;height:auto;border-right:0;border-bottom:1px solid var(--border)}.content{margin-left:0}}
     </style>
 </head>
 <body>

@@ -7,37 +7,81 @@
 
 @if(!$business)
     <style>
+        .content-inner{padding:0 !important;}
         .wizard-shell{
-            min-height:calc(100vh - 92px);
+            min-height:calc(100vh - 73px);
             display:grid;
             place-items:center;
             width:100%;
-            margin:-28px;
+            margin:0;
             padding:0;
             background:var(--bg);
+            overflow:hidden;
         }
         .wizard-panel{
+            position:relative;
+            overflow:hidden;
             width:100%;
             min-height:calc(100vh - 92px);
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+            align-items:center;
             border:none;
             border-radius:0;
             padding:36px;
-            background:
-                radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 45%),
-                var(--card);
+            background:#ffffff;
+            color:#1f2937;
             box-shadow:none;
         }
-        .wizard-head{display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:26px}
+        .wizard-bg{
+            position:absolute;
+            inset:0;
+            overflow:hidden;
+            pointer-events:none;
+        }
+        .wizard-circles{
+            position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            margin:0;
+            padding:0;
+            list-style:none;
+        }
+        .wizard-circles li{
+            position:absolute;
+            display:block;
+            width:20px;
+            height:20px;
+            background:rgba(107,114,128,0.18);
+            bottom:-150px;
+            animation:wizardFloat 25s linear infinite;
+        }
+        .wizard-circles li:nth-child(1){left:25%;width:80px;height:80px;animation-delay:0s;}
+        .wizard-circles li:nth-child(2){left:10%;width:20px;height:20px;animation-delay:2s;animation-duration:12s;}
+        .wizard-circles li:nth-child(3){left:70%;width:20px;height:20px;animation-delay:4s;}
+        .wizard-circles li:nth-child(4){left:40%;width:60px;height:60px;animation-delay:0s;animation-duration:18s;}
+        .wizard-circles li:nth-child(5){left:65%;width:20px;height:20px;animation-delay:0s;}
+        .wizard-circles li:nth-child(6){left:75%;width:110px;height:110px;animation-delay:3s;}
+        .wizard-circles li:nth-child(7){left:35%;width:150px;height:150px;animation-delay:7s;}
+        .wizard-circles li:nth-child(8){left:50%;width:25px;height:25px;animation-delay:15s;animation-duration:45s;}
+        .wizard-circles li:nth-child(9){left:20%;width:15px;height:15px;animation-delay:2s;animation-duration:35s;}
+        .wizard-circles li:nth-child(10){left:85%;width:150px;height:150px;animation-delay:0s;animation-duration:11s;}
+        .wizard-head{display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+        .wizard-head,.wizard-body,.wizard-help,.wizard-step{color:#4b5563}
         .wizard-title{margin:0 0 8px;font-size:34px;line-height:1.1}
         .wizard-sub{margin:0;color:var(--muted)}
         .wizard-step{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:none;color:var(--muted);font-size:14px}
-        .wizard-step .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
-        .wizard-body{max-width:760px;margin:0 auto;text-align:center}
+        .wizard-step .dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
+        .wizard-body{width:min(760px,100%);margin:0 auto;text-align:center}
         .wizard-card{animation:fadeSlide .35s ease}
+        .wizard-body,.wizard-head{position:relative;z-index:1}
         .wizard-q{margin:0 0 8px;font-size:28px}
         .wizard-help{margin:0 0 18px;color:var(--muted)}
-        .wiz-input,.wiz-textarea{width:100%;padding:14px 16px;border-radius:14px;border:none;background:transparent;color:var(--text);outline:none}
-        .wiz-input:focus,.wiz-textarea:focus{border-color:var(--primary)}
+        .wiz-input,.wiz-textarea{width:100%;padding:14px 16px;border-radius:14px;border:none;background:#f3f4f6;color:#111827;outline:none}
+        .wiz-input:focus,.wiz-textarea:focus{background:#e5e7eb}
         .wiz-textarea{resize:vertical;min-height:130px}
         .wizard-actions{margin-top:18px;display:flex;gap:10px;justify-content:center}
         .btn-soft{background:#475569}
@@ -45,10 +89,20 @@
             from{opacity:0;transform:translateY(10px)}
             to{opacity:1;transform:translateY(0)}
         }
+        @keyframes wizardFloat{
+            0%{transform:translateY(0) rotate(0deg);opacity:1;border-radius:0;}
+            100%{transform:translateY(-1000px) rotate(720deg);opacity:0;border-radius:50%;}
+        }
     </style>
 
     <div class="wizard-shell">
         <div class="wizard-panel">
+            <div class="wizard-bg" aria-hidden="true">
+                <ul class="wizard-circles">
+                    <li></li><li></li><li></li><li></li><li></li>
+                    <li></li><li></li><li></li><li></li><li></li>
+                </ul>
+            </div>
             <div class="wizard-head">
                 <span class="wizard-step" id="stepBadge"><span class="dot"></span>Step 1 of 2</span>
             </div>
