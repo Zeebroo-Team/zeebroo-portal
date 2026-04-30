@@ -1,5 +1,6 @@
 {
     "Auth": true,
     "Theme": true,
-    "Business": true
+    "Business": true,
+    "Account": true
 }

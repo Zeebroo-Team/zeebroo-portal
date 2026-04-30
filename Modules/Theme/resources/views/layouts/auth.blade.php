@@ -20,7 +20,8 @@
         input:focus,select:focus{border-color:var(--primary)}
         .error{color:var(--error);font-size:13px;min-height:18px;margin-top:5px}
         .row{display:flex;justify-content:space-between;align-items:center;margin:8px 0 15px}
-        button{width:100%;border:0;border-radius:12px;padding:12px 14px;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary2));font-weight:600;cursor:pointer}
+        button{width:100%;border:0;border-radius:12px;padding:12px 14px;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary2));font-weight:600;cursor:pointer;transition:all .2s ease}
+        button:hover{background:#facc15;color:#111827}
         .meta{margin-top:16px;text-align:center;color:var(--muted);font-size:14px}
         .meta a,.theme a{color:var(--text);text-decoration:none;font-weight:600}
         .theme{text-align:center;margin-top:8px;color:var(--muted);font-size:13px}

@@ -3,6 +3,12 @@
 @section('content')
 @php
     $business = auth()->user()->businesses()->latest()->first();
+    $hasCurrentAccount = $business
+        ? \Modules\Account\Models\Account::where('user_id', auth()->id())
+            ->where('business_id', $business->id)
+            ->whereHas('bankType', fn ($query) => $query->where('slug', 'current-account'))
+            ->exists()
+        : false;
 @endphp
 
 @if(!$business)
@@ -80,8 +86,20 @@
         .wizard-body,.wizard-head{position:relative;z-index:1}
         .wizard-q{margin:0 0 8px;font-size:28px}
         .wizard-help{margin:0 0 18px;color:var(--muted)}
-        .wiz-input,.wiz-textarea{width:100%;padding:14px 16px;border-radius:14px;border:none;background:#f3f4f6;color:#111827;outline:none}
-        .wiz-input:focus,.wiz-textarea:focus{background:#e5e7eb}
+        .wiz-input,.wiz-textarea{
+            width:100%;
+            padding:14px 16px;
+            border-radius:12px;
+            border:1px solid #d1d5db;
+            background:#f9fafb;
+            color:#111827;
+            outline:none;
+            transition:all .2s ease;
+        }
+        .wiz-input:focus,.wiz-textarea:focus{
+            border-color:#a78bfa;
+            background:#ffffff;
+        }
         .wiz-textarea{resize:vertical;min-height:130px}
         .wizard-actions{margin-top:18px;display:flex;gap:10px;justify-content:center}
         .btn-soft{background:#475569}
@@ -166,10 +184,53 @@
             </form>
         </div>
     </div>
+@elseif(!$hasCurrentAccount)
+    <style>
+        .account-notice-shell{
+            min-height:calc(100vh - 73px);
+            display:grid;
+            place-items:center;
+            width:100%;
+            margin:0;
+            padding:0;
+        }
+        .account-notice-panel{
+            width:100%;
+            min-height:calc(100vh - 92px);
+            display:grid;
+            place-items:center;
+            background:#ffffff;
+            color:#1f2937;
+        }
+        .account-notice-card{
+            text-align:center;
+            max-width:620px;
+            padding:24px;
+        }
+    </style>
+    <div class="account-notice-shell">
+        <div class="account-notice-panel">
+            <div class="account-notice-card">
+                <h2 style="margin:0 0 8px;">Account not setup for your business</h2>
+                <p style="margin:0 0 18px;color:#6b7280;">
+                    Your business is ready, but a Current Account is required to continue.
+                </p>
+                <a class="linkbtn" href="{{ route('account.onboarding') }}">Please add account</a>
+            </div>
+        </div>
+    </div>
 @else
     @if(session('status'))
-        <div class="card" style="margin-bottom:14px;padding:12px 16px;max-width:100%;border-color:#22c55e;">
-            <div style="color:#22c55e;font-weight:600;">{{ session('status') }}</div>
+        <div class="card" style="margin-bottom:14px;max-width:100%;padding:0;border:none;">
+            <div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#ecfdf5,#dcfce7);border:1px solid #86efac;">
+                <div style="width:28px;height:28px;border-radius:999px;background:#22c55e;color:#fff;display:grid;place-items:center;font-weight:700;flex-shrink:0;">✓</div>
+                <div>
+                    <div style="color:#166534;font-weight:700;">{{ session('status') }}</div>
+                    <div style="color:#15803d;font-size:13px;margin-top:2px;">
+                        Great job! Your current account is now connected to this business. You can continue with daily operations and financial tracking.
+                    </div>
+                </div>
+            </div>
         </div>
     @endif
     <div class="card">
