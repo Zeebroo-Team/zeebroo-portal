@@ -11,11 +11,17 @@ class LoanService
 {
     public function listForBusiness(?Business $business): Collection
     {
-        if (!$business) {
+        if (! $business) {
             return new Collection([]);
         }
 
-        return Loan::with(['bank', 'deductAccount.bank', 'deductAccount.bankType'])
+        return Loan::with([
+            'bank',
+            'deductAccount.bank',
+            'deductAccount.bankType',
+            'ledgerTransactions.deductAccount.bank',
+            'ledgerTransactions.deductAccount.bankType',
+        ])
             ->where('business_id', $business->id)
             ->latest()
             ->get();
@@ -29,10 +35,30 @@ class LoanService
         return Loan::create($data);
     }
 
+    /** Load loan with relations only if owned by user (scoped to businesses they belong to). */
+    public function loanForUser(User $user, Loan $loan): ?Loan
+    {
+        $businessIds = $user->businesses()->pluck('id')->all();
+        if ($loan->user_id !== $user->id || ! in_array($loan->business_id, $businessIds, true)) {
+            return null;
+        }
+
+        return Loan::query()
+            ->whereKey($loan->getKey())
+            ->with([
+                'bank',
+                'deductAccount.bank',
+                'deductAccount.bankType',
+                'ledgerTransactions.deductAccount.bank',
+                'ledgerTransactions.deductAccount.bankType',
+            ])
+            ->first();
+    }
+
     public function deleteForUser(User $user, Loan $loan): bool
     {
         $businessIds = $user->businesses()->pluck('id')->all();
-        if ($loan->user_id !== $user->id || !in_array($loan->business_id, $businessIds, true)) {
+        if ($loan->user_id !== $user->id || ! in_array($loan->business_id, $businessIds, true)) {
             return false;
         }
 

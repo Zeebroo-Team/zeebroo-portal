@@ -7,17 +7,18 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Modules\Account\Models\Loan;
 use Modules\Business\Models\Business;
+use Modules\Transaction\Models\LedgerTransaction;
 
 class LoanOverviewTooltipService
 {
     public function forUser(?User $user): ?array
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
         $business = Business::currentForNavbar($user);
-        if (!$business) {
+        if (! $business) {
             return null;
         }
 
@@ -62,7 +63,7 @@ class LoanOverviewTooltipService
                 'bankName' => $loan->bank?->name ?? '—',
                 'principalFormatted' => number_format((float) $loan->borrowed_amount, 2, '.', ''),
                 'rateTypeLabel' => $rateTypeLabels[$loan->interest_rate_type] ?? $loan->interest_rate_type,
-                'rateDisplay' => $ratePct . ($loan->interest_rate_type === Loan::INTEREST_RATE_PERCENTAGE ? '%' : ''),
+                'rateDisplay' => $ratePct.($loan->interest_rate_type === Loan::INTEREST_RATE_PERCENTAGE ? '%' : ''),
                 'cadenceLabel' => $recurringLabels[$loan->recurring_type] ?? $loan->recurring_type,
                 'periods' => $n,
                 'periodsSource' => $periodsSource,
@@ -118,6 +119,7 @@ class LoanOverviewTooltipService
 
         if ($loan->interest_rate_type === Loan::INTEREST_RATE_PERCENTAGE) {
             $i = $this->periodicInterestDecimal((float) $loan->interest_rate, $loan->recurring_type);
+
             return $this->amortPayment($principal, $i, $n);
         }
 
@@ -200,7 +202,7 @@ class LoanOverviewTooltipService
             }
         }
 
-        return 'default assumed term (' . $resolvedN . ' periods)';
+        return 'default assumed term ('.$resolvedN.' periods)';
     }
 
     private function assumedPeriodCount(string $recur): int
@@ -253,6 +255,139 @@ class LoanOverviewTooltipService
         }
 
         return $dates;
+    }
+
+    /**
+     * One row per scheduled installment: expected amount, whether a ledger entry exists for that due date, and past-due-unpaid flag.
+     *
+     * @return Collection<int, array{period: int, due: Carbon, due_ymd: string, amount: float, amount_formatted: string, paid: bool, past_due_unpaid: bool, status_label: string, ledger: ?LedgerTransaction}>
+     */
+    public function installmentScheduleWithPaymentStatus(Loan $loan, ?Carbon $asOf = null): Collection
+    {
+        $today = ($asOf ?? Carbon::today())->copy()->startOfDay();
+        $schedule = $this->installmentScheduleDates($loan);
+
+        if (! $loan->relationLoaded('ledgerTransactions')) {
+            $loan->load(['ledgerTransactions.deductAccount.bank', 'ledgerTransactions.deductAccount.bankType']);
+        }
+
+        $summary = $this->summarizeLoan($loan);
+        $amount = (float) $summary['payment_per_period'];
+        $amountFormatted = $summary['payment_formatted'];
+
+        $rows = collect();
+        $period = 0;
+
+        foreach ($schedule as $due) {
+            $period++;
+            $d = $due->copy()->startOfDay();
+            $paid = $this->loanHasLedgerOnDate($loan, $d);
+            $pastDueUnpaid = $d->lt($today) && ! $paid;
+
+            if ($paid) {
+                $statusLabel = 'Paid';
+            } elseif ($pastDueUnpaid) {
+                $statusLabel = 'Past due · unpaid';
+            } else {
+                $statusLabel = 'Outstanding';
+            }
+
+            $ledgerTx = null;
+            if ($paid) {
+                foreach ($loan->ledgerTransactions as $ledgerRow) {
+                    if ($ledgerRow->occurrence_date === null) {
+                        continue;
+                    }
+                    if (Carbon::parse($ledgerRow->occurrence_date)->toDateString() === $due->copy()->startOfDay()->toDateString()) {
+                        $ledgerTx = $ledgerRow;
+                        break;
+                    }
+                }
+            }
+
+            $rows->push([
+                'period' => $period,
+                'due' => $due->copy(),
+                'due_ymd' => $due->copy()->startOfDay()->toDateString(),
+                'amount' => $amount,
+                'amount_formatted' => $amountFormatted,
+                'paid' => $paid,
+                'past_due_unpaid' => $pastDueUnpaid,
+                'status_label' => $statusLabel,
+                'ledger' => $ledgerTx,
+            ]);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * True when at least one scheduled installment strictly before calendar day "$asOf" has no ledger row.
+     *
+     * @param  Carbon|null  $asOf  Compare using this day as “today”, start of day (defaults to application today).
+     */
+    public function loanHasOverdueInstallments(Loan $loan, ?Carbon $asOf = null): bool
+    {
+        $today = ($asOf ?? Carbon::today())->copy()->startOfDay();
+
+        if (! $loan->first_installment_due_date instanceof Carbon) {
+            return false;
+        }
+
+        $schedule = $this->installmentScheduleDates($loan);
+        if ($schedule->isEmpty()) {
+            return false;
+        }
+
+        if (! $loan->relationLoaded('ledgerTransactions')) {
+            $loan->load('ledgerTransactions');
+        }
+
+        foreach ($schedule as $due) {
+            $d = $due->copy()->startOfDay();
+            if ($d->gte($today)) {
+                break;
+            }
+            if (! $this->loanHasLedgerOnDate($loan, $d)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** True if any loan under the business has a past-due installment with no matching ledger row. */
+    public function businessHasOverdueLoanInstallments(Business $business): bool
+    {
+        $loans = Loan::query()
+            ->where('business_id', $business->id)
+            ->with('ledgerTransactions')
+            ->get();
+
+        foreach ($loans as $loan) {
+            if ($this->loanHasOverdueInstallments($loan)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function loanHasLedgerOnDate(Loan $loan, Carbon $day): bool
+    {
+        $needle = $day->toDateString();
+
+        foreach ($loan->ledgerTransactions as $row) {
+            if ($row->occurrence_date === null) {
+                continue;
+            }
+
+            if (Carbon::parse($row->occurrence_date)->toDateString() === $needle) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function advanceLoanCadence(Carbon $cursor, string $recur): void

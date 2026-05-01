@@ -31,6 +31,15 @@
         .rental-card{position:relative;display:flex;align-items:stretch;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:color-mix(in srgb,var(--card) 98%,transparent);box-shadow:0 4px 18px -16px rgba(0,0,0,.35);transition:border-color .18s ease,box-shadow .18s ease;}
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card{background:var(--card);}
         .rental-card:hover{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));box-shadow:0 8px 24px -18px color-mix(in srgb,var(--primary) 12%,#000);}
+        @keyframes rental-card-overdue-pulse{
+            0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 28%,transparent),0 4px 18px -16px color-mix(in srgb,#ea580c 32%,rgba(0,0,0,.35));}
+            50%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 55%,transparent),0 8px 26px -14px color-mix(in srgb,#f97316 36%,rgba(0,0,0,.35));}
+        }
+        .rental-card--overdue{border-color:color-mix(in srgb,#fb923c 58%,var(--border));animation:rental-card-overdue-pulse 2.4s ease-in-out infinite;}
+        .rental-card--overdue .rental-card__ribbon{width:5px;background:linear-gradient(180deg,#f97316 0%,#ef4444 45%,#fdba74 100%);}
+        @media (prefers-reduced-motion:reduce){
+            .rental-card--overdue{animation:none;}
+        }
         .rental-card__ribbon{position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 42%,#1e293b));pointer-events:none;}
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card__ribbon{background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 25%,var(--text)));}
         .rental-card__hit{flex:1;min-width:0;margin-left:3px;text-decoration:none;color:inherit;display:flex;align-items:center;}
@@ -42,6 +51,8 @@
         .rental-card__title{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em;line-height:1.2;display:inline-flex;align-items:center;gap:6px;color:var(--text);}
         .rental-card__title .fa-building{color:var(--primary);opacity:.9;font-size:13px;}
         .rental-card__pill{display:inline-flex;align-items:center;gap:3px;margin:0;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:color-mix(in srgb,var(--primary) 72%,var(--text));padding:3px 7px;border-radius:999px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--border));background:color-mix(in srgb,var(--primary) 7%,transparent);line-height:1.2;}
+        .rental-card__pill--overdue{border-color:color-mix(in srgb,#f97316 55%,var(--border));background:color-mix(in srgb,#f97316 16%,transparent);color:color-mix(in srgb,#fed7aa 75%,var(--text));}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card__pill--overdue{color:#9a3412;}
         .rental-card__meta{margin:4px 0 0;font-size:11px;line-height:1.35;color:var(--muted);}
         .rental-card__aside{display:flex;align-items:center;gap:14px;margin-left:auto;flex-wrap:wrap;text-align:right;}
         .rental-card__cost{text-align:right;min-width:7.5rem;}
@@ -140,7 +151,7 @@
                                 $listMetaParts[] = \Illuminate\Support\Str::limit((string) $rental->landlord->name, 32);
                             }
                         @endphp
-                        <article class="rental-card">
+                        <article @class(['rental-card', 'rental-card--overdue' => ($rentalPaymentOverdue[$rental->id] ?? false)])>
                             <div class="rental-card__ribbon" aria-hidden="true"></div>
                             <a class="rental-card__hit" href="{{ route('account.rentals.show', $rental) }}">
                                 <div class="rental-card__inner">
@@ -148,6 +159,9 @@
                                         <div class="rental-card__titles-row">
                                             <h3 class="rental-card__title"><i class="fa fa-building" aria-hidden="true"></i> {{ $rental->property_type }}</h3>
                                             <span class="rental-card__pill"><i class="fa fa-clock" style="opacity:.85;" aria-hidden="true"></i>{{ $recurringTypes[$rental->recurring_type] ?? $rental->recurring_type }}</span>
+                                            @if($rentalPaymentOverdue[$rental->id] ?? false)
+                                                <span class="rental-card__pill rental-card__pill--overdue" title="A billing date before today has no ledger payment logged for that date."><i class="fa fa-circle-exclamation" style="font-size:.95em;" aria-hidden="true"></i> Overdue</span>
+                                            @endif
                                         </div>
                                         <p class="rental-card__meta">{{ implode(' · ', array_filter($listMetaParts)) }}</p>
                                     </div>

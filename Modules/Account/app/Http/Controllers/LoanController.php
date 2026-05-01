@@ -3,22 +3,26 @@
 namespace Modules\Account\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Modules\Account\Models\Account;
 use Modules\Account\Models\Bank;
 use Modules\Account\Models\Loan;
 use Modules\Account\Services\LoanOverviewTooltipService;
 use Modules\Account\Services\LoanService;
 use Modules\Business\Models\Business;
+use Modules\Transaction\Services\LoanManualInstallmentSettlementService;
 
 class LoanController extends Controller
 {
-    public function __construct(private readonly LoanService $loanService)
-    {
-    }
+    public function __construct(
+        private readonly LoanService $loanService,
+        private readonly LoanManualInstallmentSettlementService $installmentSettlementService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -35,6 +39,7 @@ class LoanController extends Controller
             : collect();
 
         $loanSummaries = [];
+        $loanInstallmentOverdue = [];
         $loanCurrency = '';
         $loanPortfolioTotals = ['principal' => 0.0, 'approx_monthly' => 0.0];
         if ($business !== null && $loans->isNotEmpty()) {
@@ -42,6 +47,7 @@ class LoanController extends Controller
             $calc = app(LoanOverviewTooltipService::class);
             foreach ($loans as $loanItem) {
                 $loanSummaries[$loanItem->id] = $calc->summarizeLoan($loanItem);
+                $loanInstallmentOverdue[$loanItem->id] = $calc->loanHasOverdueInstallments($loanItem);
                 $loanPortfolioTotals['principal'] += (float) $loanItem->borrowed_amount;
                 $loanPortfolioTotals['approx_monthly'] += $loanSummaries[$loanItem->id]['approx_monthly'];
             }
@@ -55,15 +61,87 @@ class LoanController extends Controller
             'interestRateTypes' => Loan::interestRateTypes(),
             'recurringTypes' => Loan::recurringTypes(),
             'loanSummaries' => $loanSummaries,
+            'loanInstallmentOverdue' => $loanInstallmentOverdue,
             'loanCurrency' => $loanCurrency,
             'loanPortfolioTotals' => $loanPortfolioTotals,
         ]);
     }
 
+    public function show(Request $request, Loan $loan): View
+    {
+        $user = $request->user();
+        $business = Business::currentForNavbar($user);
+        $loanModel = $this->loanService->loanForUser($user, $loan);
+        abort_if($loanModel === null, 403);
+        abort_unless($business !== null && (int) $loanModel->business_id === (int) $business->id, 404);
+
+        $calc = app(LoanOverviewTooltipService::class);
+        $loanSummary = $calc->summarizeLoan($loanModel);
+        $installmentOverdue = $calc->loanHasOverdueInstallments($loanModel);
+        $loanCurrency = (string) (get_settings('business.currency', '', $business) ?: '');
+        $scheduleRows = $calc->installmentScheduleWithPaymentStatus($loanModel);
+        $ledgerRows = $loanModel->ledgerTransactions->sortBy(fn ($row) => $row->occurrence_date?->timestamp ?? 0)->values();
+
+        $accounts = Account::query()
+            ->with(['bankType', 'bank', 'warehouse'])
+            ->where('user_id', $user->id)
+            ->where('business_id', $business->id)
+            ->orderBy('account_name')
+            ->get();
+
+        return view('account::loans.show', [
+            'business' => $business,
+            'loan' => $loanModel,
+            'loanSummary' => $loanSummary,
+            'loanCurrency' => $loanCurrency,
+            'installmentOverdue' => $installmentOverdue,
+            'interestRateTypes' => Loan::interestRateTypes(),
+            'recurringTypes' => Loan::recurringTypes(),
+            'scheduleRows' => $scheduleRows,
+            'ledgerRows' => $ledgerRows,
+            'accounts' => $accounts,
+        ]);
+    }
+
+    public function settleInstallment(Request $request, Loan $loan): RedirectResponse
+    {
+        $user = $request->user();
+        $business = Business::currentForNavbar($user);
+        $loanModel = $this->loanService->loanForUser($user, $loan);
+
+        abort_if($loanModel === null, 403);
+        abort_if($business === null || (int) $loanModel->business_id !== (int) $business->id, 404);
+
+        $validated = $request->validate([
+            'occurrence_date' => ['required', 'date'],
+            'deduct_account_id' => [
+                'required',
+                'integer',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                    ->where('user_id', $user->id)
+                    ->where('business_id', $business->id)),
+            ],
+        ]);
+
+        try {
+            $this->installmentSettlementService->settle(
+                loan: $loanModel,
+                business: $business,
+                user: $user,
+                occurrenceDateYmd: Carbon::parse((string) $validated['occurrence_date'])->toDateString(),
+                deductAccountId: (int) $validated['deduct_account_id'],
+            );
+        } catch (ValidationException $e) {
+            return redirect()->route('account.loans.show', $loanModel)->withErrors($e->errors())->withInput();
+        }
+
+        return redirect()->route('account.loans.show', $loanModel)->with('status', 'Installment payment recorded and account balance updated.');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $business = Business::currentForNavbar($request->user());
-        if (!$business) {
+        if (! $business) {
             return redirect()->route('dashboard')->withErrors(['business' => 'Create a business profile first.']);
         }
 

@@ -59,6 +59,38 @@
         .menu a.active{border-color:color-mix(in srgb,var(--primary) 45%,var(--border));background:color-mix(in srgb,var(--primary) 14%,transparent)}
         .menu a:hover{border-color:color-mix(in srgb,var(--primary) 45%,var(--border));background:transparent;font-weight:700}
         .menu a.active i,.menu a:hover i{color:var(--primary)}
+        @keyframes menu-loan-due-sheen{
+            0%,100%{border-color:color-mix(in srgb,#f97316 38%,var(--border));background:color-mix(in srgb,#f97316 10%,transparent);color:color-mix(in srgb,var(--text) 88%,#fef3c7);}
+            50%{border-color:color-mix(in srgb,#fb923c 72%,var(--border));background:color-mix(in srgb,#ea580c 18%,transparent);color:color-mix(in srgb,#ffedd5 35%,var(--text));}
+        }
+        @keyframes menu-loan-due-icon{
+            0%,100%{color:#f97316!important;transform:scale(1);}
+            50%{color:#fde68a!important;transform:scale(1.06);}
+        }
+        .menu a.menu-loan-mgmt--due,
+        .menu a.menu-rentals--due{font-weight:650;animation:menu-loan-due-sheen 2.35s ease-in-out infinite;}
+        .menu a.menu-loan-mgmt--due i,
+        .menu a.menu-rentals--due i{animation:menu-loan-due-icon 1.9s ease-in-out infinite;}
+        .menu a.menu-loan-mgmt--due.active,
+        .menu a.menu-rentals--due.active{animation:menu-loan-due-sheen 2.35s ease-in-out infinite;border-color:color-mix(in srgb,#f97316 55%,var(--primary));}
+        @keyframes menu-loan-due-dot{
+            from{opacity:.72;transform:scale(1);}
+            to{opacity:1;transform:scale(1.18);}
+        }
+        .menu-loan-mgmt__pulse,
+        .menu-rentals__pulse{
+            flex-shrink:0;margin-left:auto;width:8px;height:8px;border-radius:50%;
+            background:linear-gradient(135deg,#f97316,#ef4444);
+            box-shadow:0 0 0 2px color-mix(in srgb,#f97316 28%,transparent);
+            animation:menu-loan-due-dot 1.2s ease-in-out infinite alternate;
+        }
+        @media (prefers-reduced-motion:reduce){
+            .menu a.menu-loan-mgmt--due,.menu a.menu-loan-mgmt--due i,
+            .menu a.menu-rentals--due,.menu a.menu-rentals--due i{animation:none;}
+            .menu a.menu-loan-mgmt--due,.menu a.menu-rentals--due{border-color:color-mix(in srgb,#f97316 50%,var(--border));background:color-mix(in srgb,#f97316 12%,transparent);}
+            .menu a.menu-loan-mgmt--due i,.menu a.menu-rentals--due i{color:#fb923c!important;}
+            .menu-loan-mgmt__pulse,.menu-rentals__pulse{animation:none;}
+        }
         .menu-group-title{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:600;background:color-mix(in srgb,var(--primary) 8%,transparent)}
         .submenu{display:flex;flex-direction:column;gap:4px;margin-left:12px;padding-left:8px;border-left:1px dashed color-mix(in srgb,var(--primary) 35%,var(--border))}
         .submenu a{padding:7px 9px;font-size:12px}
@@ -136,7 +168,13 @@
         $navBusiness = \Modules\Business\Models\Business::currentForNavbar(auth()->user());
         $navBusinesses = \Modules\Business\Models\Business::allForNavbar(auth()->user());
         $showSidebarLoansLink = $navBusiness && $navBusiness->loans()->exists();
+        $sidebarLoanDueHighlight = $showSidebarLoansLink && $navBusiness
+            ? app(\Modules\Account\Services\LoanOverviewTooltipService::class)->businessHasOverdueLoanInstallments($navBusiness)
+            : false;
         $showSidebarRentalsLink = $navBusiness && $navBusiness->rentals()->exists();
+        $sidebarRentalDueHighlight = $showSidebarRentalsLink && $navBusiness
+            ? app(\Modules\Account\Services\RentalService::class)->businessHasOverdueRentalPayments($navBusiness)
+            : false;
         $accounts = $navBusiness
             ? \Modules\Account\Models\Account::with(['bankType', 'bank', 'warehouse'])
                 ->where('user_id', auth()->id())
@@ -160,10 +198,27 @@
             <div class="menu-section">Main</div>
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="fa fa-gauge-high"></i><span>Overview</span></a>
             @if($showSidebarLoansLink)
-                <a href="{{ route('account.loans.index') }}" class="{{ request()->routeIs('account.loans.*') ? 'active' : '' }}"><i class="fa fa-hand-holding-dollar"></i><span>Loan management</span></a>
+                <a href="{{ route('account.loans.index') }}" @class([
+                    'menu-loan-mgmt',
+                    'active' => request()->routeIs('account.loans.*'),
+                    'menu-loan-mgmt--due' => $sidebarLoanDueHighlight,
+                ]) @if($sidebarLoanDueHighlight) title="At least one loan has a due date in the past without a ledger installment yet." @endif>
+                    <i class="fa fa-hand-holding-dollar" aria-hidden="true"></i><span>Loan management</span>
+                    @if($sidebarLoanDueHighlight)
+                        <span class="menu-loan-mgmt__pulse" aria-hidden="true"></span>
+                    @endif
+                </a>
             @endif
             @if($showSidebarRentalsLink)
-                <a href="{{ route('account.rentals.index') }}" class="{{ request()->routeIs('account.rentals.*') ? 'active' : '' }}"><i class="fa fa-house"></i><span>Rentals</span></a>
+                <a href="{{ route('account.rentals.index') }}" @class([
+                    'active' => request()->routeIs('account.rentals.*'),
+                    'menu-rentals--due' => $sidebarRentalDueHighlight,
+                ]) @if($sidebarRentalDueHighlight) title="At least one rental has a billing date in the past without a ledger payment logged for that date." @endif>
+                    <i class="fa fa-house"></i><span>Rentals</span>
+                    @if($sidebarRentalDueHighlight)
+                        <span class="menu-rentals__pulse" aria-hidden="true"></span>
+                    @endif
+                </a>
             @endif
             @if($navBusiness)
                 <a href="{{ route('transactions.index') }}" class="{{ request()->routeIs('transactions.*') ? 'active' : '' }}"><i class="fa fa-arrow-right-arrow-left"></i><span>Transactions</span></a>

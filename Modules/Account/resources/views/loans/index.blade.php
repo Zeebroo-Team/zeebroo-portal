@@ -134,6 +134,30 @@
         }
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-li{background:#fff linear-gradient(180deg,#fafbff 0%,#fff);}
 
+        @keyframes loan-li-overdue-pulse{
+            0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 28%,transparent),0 14px 42px -26px color-mix(in srgb,#ea580c 38%,#000008);}
+            50%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 55%,transparent),0 18px 52px -22px color-mix(in srgb,#f97316 42%,#000008);}
+        }
+        @keyframes loan-li-ribbon-wave{
+            0%,100%{background-position:0% 0%;opacity:1;}
+            50%{background-position:0% 100%;opacity:.92;}
+        }
+
+        .loan-li--overdue{
+            border-color:color-mix(in srgb,#fb923c 58%,var(--border));
+            animation:loan-li-overdue-pulse 2.4s ease-in-out infinite;
+        }
+        .loan-li--overdue .loan-li__ribbon{
+            width:5px;
+            background:linear-gradient(180deg,#f97316 0%,#ef4444 45%,#fdba74 100%);
+            background-size:100% 220%;
+            animation:loan-li-ribbon-wave 1.85s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion:reduce){
+            .loan-li--overdue{animation:none;}
+            .loan-li--overdue .loan-li__ribbon{animation:none;}
+        }
+
         .loan-li__ribbon{
             position:absolute;left:0;top:0;bottom:0;width:3px;
             background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 35%,#1e293b));
@@ -151,6 +175,8 @@
         }
 
         .loan-li__primary{min-width:0;}
+        a.loan-li__main-link{display:block;min-width:0;color:inherit;text-decoration:none;border-radius:0 11px 11px 0;cursor:pointer;outline-offset:2px;}
+        a.loan-li__main-link:focus-visible{outline:2px solid color-mix(in srgb,var(--primary) 55%,transparent);}
         .loan-li__aside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:0;}
 
         .loan-li__header{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin-bottom:2px;}
@@ -186,6 +212,20 @@
             background:color-mix(in srgb,var(--primary) 11%,transparent);
             color:color-mix(in srgb,var(--primary) 70%,var(--text));
             white-space:nowrap;
+        }
+        .loan-li__pill--overdue{
+            border-color:color-mix(in srgb,#f97316 55%,var(--border));
+            background:color-mix(in srgb,#f97316 16%,transparent);
+            color:color-mix(in srgb,#fed7aa 75%,var(--text));
+            animation:loan-li-pill-flash 2s ease-in-out infinite;
+        }
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-li__pill--overdue{color:#9a3412;}
+        @keyframes loan-li-pill-flash{
+            0%,100%{opacity:1;transform:scale(1);}
+            50%{opacity:.88;transform:scale(1.02);}
+        }
+        @media (prefers-reduced-motion:reduce){
+            .loan-li__pill--overdue{animation:none;}
         }
 
         .loan-li__desc{
@@ -337,16 +377,19 @@
                             @php
                                 $s = $loanSummaries[$loan->id] ?? null;
                             @endphp
-                            <article class="loan-li">
+                            <article @class(['loan-li', 'loan-li--overdue' => ($loanInstallmentOverdue[$loan->id] ?? false)])>
                                 <div class="loan-li__ribbon" aria-hidden="true"></div>
                                 <div class="loan-li__layout">
-                                    <div class="loan-li__primary">
+                                    <a class="loan-li__primary loan-li__main-link" href="{{ route('account.loans.show', $loan) }}" aria-label="Open loan: {{ $loan->name }}">
                                         <header class="loan-li__header">
                                             <span class="loan-li__icon"><i class="fa fa-hand-holding-dollar"></i></span>
                                             <div class="loan-li__titles">
                                                 <h2 class="loan-li__title">{{ $loan->name }}</h2>
                                                 <p class="loan-li__bank"><i class="fa fa-building-columns"></i> {{ $loan->bank?->name ?? '—' }}</p>
                                             </div>
+                                            @if(!empty($loanInstallmentOverdue[$loan->id]))
+                                                <span class="loan-li__pill loan-li__pill--overdue" title="A due date on the schedule is in the past without a matching installment in the ledger yet."><i class="fa fa-circle-exclamation" style="font-size:.95em;"></i> Overdue</span>
+                                            @endif
                                             @if(!empty($s['cadence_label']))
                                                 <span class="loan-li__pill"><i class="fa fa-clock" style="font-size:.9em;"></i>{{ $s['cadence_label'] }}</span>
                                             @endif
@@ -441,7 +484,7 @@
                                                 </div>
                                             @endif
                                         </div>
-                                    </div>
+                                    </a>
                                     <aside class="loan-li__aside" aria-label="Actions">
                                         <form class="loan-li__del-form" method="post" action="{{ route('account.loans.destroy', $loan->id) }}" onsubmit="return confirm('Remove this loan record?');">
                                             @csrf

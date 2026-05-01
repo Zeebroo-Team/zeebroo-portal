@@ -22,6 +22,7 @@ class Rental extends Model
         'user_id',
         'business_id',
         'branch_id',
+        'address_book_id',
         'property_type',
         'purpose',
         'key_money',
@@ -29,6 +30,10 @@ class Rental extends Model
         'deduct_account_id',
         'recurring_cost',
         'recurring_type',
+        'remind_before_days',
+        'notes',
+        'due_date',
+        'first_installment_due_date',
     ];
 
     protected function casts(): array
@@ -37,6 +42,9 @@ class Rental extends Model
             'key_money' => 'decimal:2',
             'recurring_cost' => 'decimal:2',
             'agreement_valid_until_year' => 'integer',
+            'remind_before_days' => 'integer',
+            'due_date' => 'date',
+            'first_installment_due_date' => 'date',
         ];
     }
 
@@ -58,6 +66,11 @@ class Rental extends Model
     public function deductAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'deduct_account_id');
+    }
+
+    public function landlord(): BelongsTo
+    {
+        return $this->belongsTo(AddressBook::class, 'address_book_id');
     }
 
     public function ledgerTransactions(): MorphMany
