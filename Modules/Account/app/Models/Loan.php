@@ -5,7 +5,9 @@ namespace Modules\Account\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Business\Models\Business;
+use Modules\Transaction\Models\LoanDeductionTransaction;
 
 class Loan extends Model
 {
@@ -64,6 +66,11 @@ class Loan extends Model
     public function deductAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'deduct_account_id');
+    }
+
+    public function deductionTransactions(): HasMany
+    {
+        return $this->hasMany(LoanDeductionTransaction::class)->orderByDesc('deduction_date');
     }
 
     public static function interestRateTypes(): array

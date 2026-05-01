@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Account\Models\Loan;
+use Modules\Account\Models\Rental;
 use Modules\Settings\Concerns\HasSettings;
 
 class Business extends Model
@@ -37,6 +38,11 @@ class Business extends Model
     public function loans(): HasMany
     {
         return $this->hasMany(Loan::class);
+    }
+
+    public function rentals(): HasMany
+    {
+        return $this->hasMany(Rental::class);
     }
 
     public function branches(): HasMany

@@ -53,7 +53,7 @@
         .loan-modal__backdrop{
             position:fixed;inset:0;z-index:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);
         }
-        html[data-theme="light"] .loan-modal__backdrop{background:rgba(17,24,39,.38);}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-modal__backdrop{background:rgba(17,24,39,.38);}
         .loan-modal__panel{
             position:relative;z-index:1;
             box-sizing:border-box;
@@ -112,7 +112,7 @@
             box-shadow:0 10px 32px -24px rgba(0,0,0,.42),inset 0 1px 0 color-mix(in srgb,#fff .06,transparent);
             margin-bottom:4px;
         }
-        html[data-theme="light"] .loan-portfolio-snapshot{background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 11%,transparent),#fff);}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-portfolio-snapshot{background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 11%,transparent),#fff);}
         .loan-portfolio-stat{display:flex;flex-direction:column;gap:3px;}
         .loan-portfolio-stat__lbl{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;}
         .loan-portfolio-stat__val{font-size:15px;font-weight:800;letter-spacing:-.03em;line-height:1.15;color:var(--text);}
@@ -132,7 +132,7 @@
             box-shadow:0 24px 56px -32px color-mix(in srgb,var(--primary) 22%,#000008);
             transform:translateY(-1px);
         }
-        html[data-theme="light"] .loan-li{background:#fff linear-gradient(180deg,#fafbff 0%,#fff);}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-li{background:#fff linear-gradient(180deg,#fafbff 0%,#fff);}
 
         .loan-li__ribbon{
             position:absolute;left:0;top:0;bottom:0;width:3px;
@@ -162,7 +162,7 @@
             color:#fff;font-size:14px;
             box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 28%,transparent);
         }
-        html[data-theme="light"] .loan-li__icon{color:#fff;}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-li__icon{color:#fff;}
 
         .loan-li__titles{flex:1;min-width:0;}
 
@@ -213,7 +213,7 @@
 
         .loan-li__tile-lab{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;display:block;line-height:1.3;}
         .loan-li__tile-val{font-size:13px;font-weight:800;line-height:1.2;letter-spacing:-.025em;color:var(--text);word-break:break-word;}
-        html[data-theme="light"] .loan-li__tile-val{color:#0f172a;}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-li__tile-val{color:#0f172a;}
         .loan-li__tile--hero .loan-li__tile-val{color:color-mix(in srgb,var(--primary) 78%,var(--text));font-size:14px;}
         .loan-li__tile-cur{font-size:10px;font-weight:600;opacity:.75;margin-right:.12em;text-transform:uppercase;}
 
@@ -240,8 +240,8 @@
             border-color:color-mix(in srgb,#ef4444 68%,var(--border));
             color:#fecaca;
         }
-        html[data-theme="light"] .loan-btn--danger{color:#dc2626;}
-        html[data-theme="light"] .loan-btn--danger:hover{color:#b91c1c;}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-btn--danger{color:#dc2626;}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-btn--danger:hover{color:#b91c1c;}
         .loan-form-section{margin-bottom:11px;padding:11px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--border) 80%,transparent);background:color-mix(in srgb,var(--card) 88%,transparent);box-shadow:0 6px 18px -18px rgba(0,0,0,.22);}
         .loan-form-section__head{display:flex;align-items:center;gap:7px;margin-bottom:9px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--text);}
         .loan-form-section__head i{color:var(--primary);opacity:.95;}

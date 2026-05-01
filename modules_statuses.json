@@ -3,5 +3,6 @@
     "Theme": true,
     "Business": true,
     "Account": true,
-    "Settings": true
+    "Settings": true,
+    "Transaction": true
 }

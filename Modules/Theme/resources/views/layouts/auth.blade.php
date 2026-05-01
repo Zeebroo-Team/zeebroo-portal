@@ -7,7 +7,9 @@
     <title>{{ $title ?? 'Auth' }}</title>
     <style>
         :root{--bg:#090d1a;--card:#10172a;--text:#e5e7eb;--muted:#94a3b8;--primary:#7c3aed;--primary2:#2563eb;--border:#334155;--error:#ef4444}
-        html[data-theme="light"]{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#475569;--primary:#4f46e5;--primary2:#2563eb;--border:#d1d5db}
+        html[data-theme="light"]{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#475569;--primary:#ca8a04;--primary2:#eab308;--border:#d1d5db}
+        html[data-theme="light_blue"]{--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--muted:#64748b;--primary:#2563eb;--primary2:#1d4ed8;--border:#e2e8f0}
+        html[data-theme="night_blue"]{--bg:#070b14;--card:#0f172a;--text:#e2e8f0;--muted:#94a3b8;--primary:#3b82f6;--primary2:#2563eb;--border:#1e293b}
         html[data-theme="ocean"]{--bg:#082f49;--card:#0c4a6e;--text:#e0f2fe;--muted:#bae6fd;--primary:#06b6d4;--primary2:#0ea5e9;--border:#0369a1}
         *{box-sizing:border-box}
         body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 15% 10%,var(--primary2),var(--bg) 45%);font-family:Inter,system-ui,sans-serif;color:var(--text);padding:20px}

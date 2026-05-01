@@ -4,6 +4,7 @@ namespace Modules\Account\Services;
 
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Modules\Account\Models\Loan;
 use Modules\Business\Models\Business;
 
@@ -209,6 +210,58 @@ class LoanOverviewTooltipService
             Loan::RECURRING_PER_DAY => 30,
             Loan::RECURRING_PER_YEAR => 5,
             default => 12,
+        };
+    }
+
+    /**
+     * Due dates for each installment (same cadence / bounds as period count used for payment math).
+     *
+     * @return Collection<int, Carbon>
+     */
+    public function installmentScheduleDates(Loan $loan): Collection
+    {
+        $first = $loan->first_installment_due_date;
+        if (! $first instanceof Carbon) {
+            return collect();
+        }
+
+        $start = $first->copy()->startOfDay();
+        $dates = collect();
+        $cursor = $start->copy();
+        $last = $loan->loan_ending_date?->copy()->startOfDay();
+
+        if ($last instanceof Carbon && $last->lt($start)) {
+            return collect();
+        }
+
+        $maxIterations = 10000;
+
+        if ($last instanceof Carbon) {
+            while ($cursor->lte($last) && $dates->count() < $maxIterations) {
+                $dates->push($cursor->copy());
+                $this->advanceLoanCadence($cursor, $loan->recurring_type);
+            }
+
+            return $dates;
+        }
+
+        $n = $this->assumedPeriodCount($loan->recurring_type);
+
+        for ($i = 0; $i < $n && $i < $maxIterations; $i++) {
+            $dates->push($cursor->copy());
+            $this->advanceLoanCadence($cursor, $loan->recurring_type);
+        }
+
+        return $dates;
+    }
+
+    private function advanceLoanCadence(Carbon $cursor, string $recur): void
+    {
+        match ($recur) {
+            Loan::RECURRING_PER_DAY => $cursor->addDay(),
+            Loan::RECURRING_PER_YEAR => $cursor->addYear(),
+            Loan::RECURRING_PER_MONTH => $cursor->addMonth(),
+            default => $cursor->addMonth(),
         };
     }
 

@@ -1,5 +1,12 @@
+@php
+    $__socibizUiThemesAllowed = ['night', 'light', 'light_blue', 'ocean', 'night_blue'];
+    $__socibizUiThemeStored = auth()->check() ? get_settings('ui.theme', 'night') : null;
+    $__ui_theme = ($__socibizUiThemeStored !== null && in_array((string) $__socibizUiThemeStored, $__socibizUiThemesAllowed, true))
+        ? (string) $__socibizUiThemeStored
+        : 'night';
+@endphp
 <!doctype html>
-<html lang="en" data-theme="night">
+<html lang="en" data-theme="{{ $__ui_theme }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,8 +15,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
     <style>
         :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#9ca3af;--border:#334155;--primary:#7c3aed;--btn-bg:#7c3aed;--btn-hover:#facc15}
-        html[data-theme="light"]{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#4b5563;--border:#d1d5db;--primary:#2563eb;--btn-bg:#111827;--btn-hover:#facc15}
+        /* Light: yellow/amber accent, near-black text, warm grays (no blue primary) */
+        html[data-theme="light"]{--bg:#fafaf9;--card:#ffffff;--text:#0a0a0a;--muted:#57534e;--border:#d6d3d1;--primary:#ca8a04;--btn-bg:#171717;--btn-hover:#facc15}
+        html[data-theme="light"] .brand:before{background:#171717;color:#facc15}
+        html[data-theme="light"] .avatar{background:#171717;color:#facc15}
+        html[data-theme="light"] .sidebar{background:var(--card);}
+        /* Light blue & white — cool grays */
+        html[data-theme="light_blue"]{--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--primary:#2563eb;--btn-bg:#1e293b;--btn-hover:#38bdf8}
+        html[data-theme="light_blue"] #accountDropdownBtn{background:#ffffff!important;}
+        html[data-theme="light_blue"] .brand:before{background:#2563eb;color:#ffffff;}
+        html[data-theme="light_blue"] .avatar{background:#1e293b;color:#e0f2fe;}
+        html[data-theme="light_blue"] .sidebar{background:var(--card);}
+        /* Night — blue accents */
+        html[data-theme="night_blue"]{--bg:#070b14;--card:#0f172a;--text:#e2e8f0;--muted:#94a3b8;--border:#1e293b;--primary:#3b82f6;--btn-bg:#2563eb;--btn-hover:#fcd34d}
+        html[data-theme="night_blue"] #accountDropdownBtn{background:color-mix(in srgb,var(--card) 88%,transparent)!important;border-color:var(--border);}
+        html[data-theme="night_blue"] .brand:before{background:#1d4ed8;color:#f8fafc;}
+        html[data-theme="night_blue"] .avatar{background:#1e293b;color:#bae6fd;}
+        html[data-theme="night_blue"] .sidebar{background:var(--card);}
         html[data-theme="ocean"]{--bg:#082f49;--card:#0c4a6e;--text:#e0f2fe;--muted:#bae6fd;--border:#0369a1;--primary:#06b6d4;--btn-bg:#0891b2;--btn-hover:#facc15}
+        #accountDropdownBtn{background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 24%,var(--card)),var(--card));}
+        html[data-theme="light"] #accountDropdownBtn{background:#ffffff!important;}
         body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
         .layout{min-height:100vh}
         .sidebar{
@@ -110,7 +135,8 @@
         $minimalAppShell = filter_var($minimalAppShell ?? false, FILTER_VALIDATE_BOOLEAN);
         $navBusiness = \Modules\Business\Models\Business::currentForNavbar(auth()->user());
         $navBusinesses = \Modules\Business\Models\Business::allForNavbar(auth()->user());
-        $showLoanManagement = (bool) $navBusiness;
+        $showSidebarLoansLink = $navBusiness && $navBusiness->loans()->exists();
+        $showSidebarRentalsLink = $navBusiness && $navBusiness->rentals()->exists();
         $accounts = $navBusiness
             ? \Modules\Account\Models\Account::with(['bankType', 'bank', 'warehouse'])
                 ->where('user_id', auth()->id())
@@ -133,9 +159,14 @@
         <nav class="menu">
             <div class="menu-section">Main</div>
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="fa fa-gauge-high"></i><span>Overview</span></a>
-            @if($showLoanManagement)
+            @if($showSidebarLoansLink)
                 <a href="{{ route('account.loans.index') }}" class="{{ request()->routeIs('account.loans.*') ? 'active' : '' }}"><i class="fa fa-hand-holding-dollar"></i><span>Loan management</span></a>
+            @endif
+            @if($showSidebarRentalsLink)
                 <a href="{{ route('account.rentals.index') }}" class="{{ request()->routeIs('account.rentals.*') ? 'active' : '' }}"><i class="fa fa-house"></i><span>Rentals</span></a>
+            @endif
+            @if($navBusiness)
+                <a href="{{ route('transactions.index') }}" class="{{ request()->routeIs('transactions.*') ? 'active' : '' }}"><i class="fa fa-arrow-right-arrow-left"></i><span>Transactions</span></a>
             @endif
             @if($navBusiness && $navBusiness->multiWarehouseBranchEnabled())
                 <a href="{{ route('business.branches.index') }}" class="{{ request()->routeIs('business.branches.*') ? 'active' : '' }}"><i class="fa fa-code-branch"></i><span>Branches</span></a>
@@ -201,7 +232,7 @@
                     </div>
                 </div>
                 <div class="user-dropdown">
-                    <button type="button" class="user-trigger" id="accountDropdownBtn" style="background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 24%,var(--card)),var(--card));">
+                    <button type="button" class="user-trigger" id="accountDropdownBtn">
                         <i class="fa fa-building-columns"></i>
                         <span>Account</span>
                         <i class="fa fa-chevron-down"></i>
@@ -284,13 +315,24 @@
                             <span><i class="fa fa-box" style="margin-right:6px;"></i>Purchased Package</span>
                             <span class="pkg-badge">Free Trial</span>
                         </div>
-                        <div class="theme-switch">
-                            <span><i class="fa fa-sun" style="margin-right:6px;"></i>Light Theme</span>
-                            <label class="switch">
-                                <input type="checkbox" id="lightThemeToggle">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
+                        @if(auth()->check())
+                            <div class="menu-row" style="display:block;">
+                                <form method="post" action="{{ route('settings.store') }}" style="margin:0;">
+                                    @csrf
+                                    <input type="hidden" name="scope" value="user"/>
+                                    <input type="hidden" name="key" value="ui.theme"/>
+                                    <label for="socibizNavThemeSel" style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;"><i class="fa fa-palette" style="margin-right:6px;"></i>Color theme</label>
+                                    <select name="value" id="socibizNavThemeSel" class="dropdown-select" onchange="this.form.submit()" style="width:100%;">
+                                        <option value="night" @selected($__ui_theme === 'night')>Night — violet</option>
+                                        <option value="light" @selected($__ui_theme === 'light')>Light — amber &amp; black</option>
+                                        <option value="light_blue" @selected($__ui_theme === 'light_blue')>Light — blue &amp; white</option>
+                                        <option value="night_blue" @selected($__ui_theme === 'night_blue')>Night — blue accents</option>
+                                        <option value="ocean" @selected($__ui_theme === 'ocean')>Ocean — teal</option>
+                                    </select>
+                                    <noscript><button type="submit" class="linkbtn" style="margin-top:8px;width:100%;">Save theme</button></noscript>
+                                </form>
+                            </div>
+                        @endif
                         <form method="post" action="{{ route('logout') }}" style="margin-top:6px;">
                             @csrf
                             <button type="submit" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -308,23 +350,17 @@
 </div>
 <script>
     const root = document.documentElement;
-    const savedTheme = localStorage.getItem('ui_theme') || root.getAttribute('data-theme') || 'night';
-    root.setAttribute('data-theme', savedTheme);
+    const serverTheme = @json($__ui_theme);
+    root.setAttribute('data-theme', serverTheme);
+    try {
+        localStorage.setItem('ui_theme', serverTheme);
+    } catch (e) {}
     const dropdownBtn = document.getElementById('userDropdownBtn');
     const dropdownMenu = document.getElementById('userDropdownMenu');
     const businessDropdownBtn = document.getElementById('businessDropdownBtn');
     const businessDropdownMenu = document.getElementById('businessDropdownMenu');
     const accountDropdownBtn = document.getElementById('accountDropdownBtn');
     const accountDropdownMenu = document.getElementById('accountDropdownMenu');
-    const themeToggle = document.getElementById('lightThemeToggle');
-    if (themeToggle) {
-        themeToggle.checked = savedTheme === 'light';
-        themeToggle.addEventListener('change', () => {
-            const nextTheme = themeToggle.checked ? 'light' : 'night';
-            root.setAttribute('data-theme', nextTheme);
-            localStorage.setItem('ui_theme', nextTheme);
-        });
-    }
     if (dropdownBtn && dropdownMenu) {
         dropdownBtn.addEventListener('click', () => dropdownMenu.classList.toggle('open'));
     }

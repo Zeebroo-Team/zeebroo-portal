@@ -16,7 +16,7 @@
 .branch-switch-slider:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.22);}
 .branch-switch input:checked + .branch-switch-slider{background:#22c55e;}
 .branch-switch input:checked + .branch-switch-slider:before{transform:translateX(20px);}
-html[data-theme="light"] .branch-switch-slider{background:color-mix(in srgb,#475569 75%,var(--border));}
+:is(html[data-theme="light"],html[data-theme="light_blue"]) .branch-switch-slider{background:color-mix(in srgb,#475569 75%,var(--border));}
 .branch-switch input:focus-visible + .branch-switch-slider{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 45%,transparent);}
 </style>
 

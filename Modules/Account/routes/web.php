@@ -11,6 +11,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('loans', [LoanController::class, 'store'])->name('account.loans.store');
     Route::delete('loans/{loan}', [LoanController::class, 'destroy'])->name('account.loans.destroy');
     Route::get('rentals', [RentalController::class, 'index'])->name('account.rentals.index');
+    Route::get('rentals/{rental}', [RentalController::class, 'show'])->name('account.rentals.show');
     Route::post('rentals', [RentalController::class, 'store'])->name('account.rentals.store');
     Route::delete('rentals/{rental}', [RentalController::class, 'destroy'])->name('account.rentals.destroy');
     Route::resource('accounts', AccountController::class)->names('account');

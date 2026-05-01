@@ -18,6 +18,12 @@
         <div class="row"><label><input style="width:auto" type="checkbox" name="remember"> Remember me</label></div>
         <button type="submit">Sign in</button>
     </form>
-    <div class="meta">New here? <a href="{{ route('register.page') }}">Create account</a></div>
-    <div class="theme">Theme: <a href="#" data-theme="night">Night</a> • <a href="#" data-theme="light">Light</a> • <a href="#" data-theme="ocean">Ocean</a></div>
+    <div class="meta">New here? <a href="{{ route('register') }}">Create account</a></div>
+    <div class="theme">Theme:
+        <a href="#" data-theme="night">Night</a> ·
+        <a href="#" data-theme="light">Amber light</a> ·
+        <a href="#" data-theme="light_blue">Blue light</a> ·
+        <a href="#" data-theme="night_blue">Blue dark</a> ·
+        <a href="#" data-theme="ocean">Ocean</a>
+    </div>
 @endsection

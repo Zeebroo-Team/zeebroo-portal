@@ -7,9 +7,11 @@
       "type": "select",
       "default": "night",
       "options": [
-        { "label": "Night", "value": "night" },
-        { "label": "Light", "value": "light" },
-        { "label": "Ocean", "value": "ocean" }
+        { "label": "Night — violet (dark)", "value": "night" },
+        { "label": "Light — amber, black & white", "value": "light" },
+        { "label": "Light — blue & white", "value": "light_blue" },
+        { "label": "Night — blue accents (dark)", "value": "night_blue" },
+        { "label": "Ocean — teal / cyan", "value": "ocean" }
       ],
       "required": true,
       "description": "Default UI theme for this user.",

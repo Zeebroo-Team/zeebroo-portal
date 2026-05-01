@@ -15,7 +15,7 @@
 <style>
 .wh-intro-overlay{position:fixed;inset:0;z-index:330;display:flex;align-items:center;justify-content:center;padding:max(12px,2vw);box-sizing:border-box;pointer-events:auto;}
 .wh-intro-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.5);}
-html[data-theme="light"] .wh-intro-backdrop{background:rgba(17,24,39,.35);}
+:is(html[data-theme="light"],html[data-theme="light_blue"]) .wh-intro-backdrop{background:rgba(17,24,39,.35);}
 .wh-intro-shell{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;}
 .wh-intro-card{
     position:relative;display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box;
@@ -25,7 +25,7 @@ html[data-theme="light"] .wh-intro-backdrop{background:rgba(17,24,39,.35);}
     background:var(--card);
     box-shadow:0 12px 32px rgba(0,0,0,.26);
 }
-html[data-theme="light"] .wh-intro-card{box-shadow:0 12px 28px rgba(0,0,0,.12);}
+:is(html[data-theme="light"],html[data-theme="light_blue"]) .wh-intro-card{box-shadow:0 12px 28px rgba(0,0,0,.12);}
 .wh-intro-icon{
     width:40px;height:40px;display:grid;place-items:center;border-radius:8px;margin:0 auto 12px;
     border:1px solid var(--border);background:color-mix(in srgb,var(--card) 94%,var(--border));
@@ -94,7 +94,7 @@ html[data-theme="light"] .wh-intro-card{box-shadow:0 12px 28px rgba(0,0,0,.12);}
 .wh-intro-branch-grid .branch-switch-slider:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.22);}
 .wh-intro-branch-grid .branch-switch input:checked + .branch-switch-slider{background:#22c55e;}
 .wh-intro-branch-grid .branch-switch input:checked + .branch-switch-slider:before{transform:translateX(20px);}
-html[data-theme="light"] .wh-intro-branch-grid .branch-switch-slider{background:color-mix(in srgb,#475569 75%,var(--border));}
+:is(html[data-theme="light"],html[data-theme="light_blue"]) .wh-intro-branch-grid .branch-switch-slider{background:color-mix(in srgb,#475569 75%,var(--border));}
 .wh-intro-branch-grid .branch-switch input:focus-visible + .branch-switch-slider{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 45%,transparent);}
 .wh-intro-submit{width:100%;max-width:280px;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:11px 20px;font-size:13px;font-weight:800;border-radius:12px;box-sizing:border-box;}
 #wh-intro-finish.wh-intro-submit{
