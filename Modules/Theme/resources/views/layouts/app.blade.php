@@ -67,29 +67,49 @@
             0%,100%{color:#f97316!important;transform:scale(1);}
             50%{color:#fde68a!important;transform:scale(1.06);}
         }
-        .menu a.menu-loan-mgmt--due,
-        .menu a.menu-rentals--due{font-weight:650;animation:menu-loan-due-sheen 2.35s ease-in-out infinite;}
-        .menu a.menu-loan-mgmt--due i,
-        .menu a.menu-rentals--due i{animation:menu-loan-due-icon 1.9s ease-in-out infinite;}
-        .menu a.menu-loan-mgmt--due.active,
-        .menu a.menu-rentals--due.active{animation:menu-loan-due-sheen 2.35s ease-in-out infinite;border-color:color-mix(in srgb,#f97316 55%,var(--primary));}
+        .menu a.menu-loan-mgmt--due{font-weight:650;animation:menu-loan-due-sheen 2.35s ease-in-out infinite;}
+        .menu a.menu-loan-mgmt--due i{animation:menu-loan-due-icon 1.9s ease-in-out infinite;}
+        .menu a.menu-loan-mgmt--due.active{animation:menu-loan-due-sheen 2.35s ease-in-out infinite;border-color:color-mix(in srgb,#f97316 55%,var(--primary));}
+        @keyframes menu-rental-due-sheen{
+            0%,100%{border-color:color-mix(in srgb,#ef4444 42%,var(--border));background:color-mix(in srgb,#ef4444 12%,transparent);color:color-mix(in srgb,var(--text) 88%,#fecaca);}
+            50%{border-color:color-mix(in srgb,#f87171 72%,var(--border));background:color-mix(in srgb,#dc2626 20%,transparent);color:color-mix(in srgb,#fecaca 40%,var(--text));}
+        }
+        @keyframes menu-rental-due-icon{
+            0%,100%{color:#f87171!important;transform:scale(1);}
+            50%{color:#fecaca!important;transform:scale(1.06);}
+        }
+        .menu a.menu-rentals--due{font-weight:650;animation:menu-rental-due-sheen 2.35s ease-in-out infinite;}
+        .menu a.menu-rentals--due i{animation:menu-rental-due-icon 1.9s ease-in-out infinite;}
+        .menu a.menu-rentals--due.active{animation:menu-rental-due-sheen 2.35s ease-in-out infinite;border-color:color-mix(in srgb,#ef4444 62%,var(--primary));}
         @keyframes menu-loan-due-dot{
             from{opacity:.72;transform:scale(1);}
             to{opacity:1;transform:scale(1.18);}
         }
-        .menu-loan-mgmt__pulse,
-        .menu-rentals__pulse{
+        .menu-loan-mgmt__pulse{
             flex-shrink:0;margin-left:auto;width:8px;height:8px;border-radius:50%;
             background:linear-gradient(135deg,#f97316,#ef4444);
             box-shadow:0 0 0 2px color-mix(in srgb,#f97316 28%,transparent);
             animation:menu-loan-due-dot 1.2s ease-in-out infinite alternate;
         }
+        .menu-rentals__pulse{
+            flex-shrink:0;margin-left:auto;width:8px;height:8px;border-radius:50%;
+            background:linear-gradient(135deg,#ef4444,#b91c1c);
+            box-shadow:0 0 0 2px color-mix(in srgb,#ef4444 32%,transparent);
+            animation:menu-rental-due-dot 1.2s ease-in-out infinite alternate;
+        }
+        @keyframes menu-rental-due-dot{
+            from{opacity:.72;transform:scale(1);}
+            to{opacity:1;transform:scale(1.18);}
+        }
         @media (prefers-reduced-motion:reduce){
-            .menu a.menu-loan-mgmt--due,.menu a.menu-loan-mgmt--due i,
+            .menu a.menu-loan-mgmt--due,.menu a.menu-loan-mgmt--due i{animation:none;}
+            .menu a.menu-loan-mgmt--due{border-color:color-mix(in srgb,#f97316 50%,var(--border));background:color-mix(in srgb,#f97316 12%,transparent);}
+            .menu a.menu-loan-mgmt--due i{color:#fb923c!important;}
+            .menu-loan-mgmt__pulse{animation:none;}
             .menu a.menu-rentals--due,.menu a.menu-rentals--due i{animation:none;}
-            .menu a.menu-loan-mgmt--due,.menu a.menu-rentals--due{border-color:color-mix(in srgb,#f97316 50%,var(--border));background:color-mix(in srgb,#f97316 12%,transparent);}
-            .menu a.menu-loan-mgmt--due i,.menu a.menu-rentals--due i{color:#fb923c!important;}
-            .menu-loan-mgmt__pulse,.menu-rentals__pulse{animation:none;}
+            .menu a.menu-rentals--due{border-color:color-mix(in srgb,#ef4444 55%,var(--border));background:color-mix(in srgb,#ef4444 14%,transparent);}
+            .menu a.menu-rentals--due i{color:#f87171!important;}
+            .menu-rentals__pulse{animation:none;}
         }
         .menu-group-title{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:600;background:color-mix(in srgb,var(--primary) 8%,transparent)}
         .submenu{display:flex;flex-direction:column;gap:4px;margin-left:12px;padding-left:8px;border-left:1px dashed color-mix(in srgb,var(--primary) 35%,var(--border))}
@@ -213,7 +233,7 @@
                 <a href="{{ route('account.rentals.index') }}" @class([
                     'active' => request()->routeIs('account.rentals.*'),
                     'menu-rentals--due' => $sidebarRentalDueHighlight,
-                ]) @if($sidebarRentalDueHighlight) title="At least one rental has a billing date in the past without a ledger payment logged for that date." @endif>
+                ]) @if($sidebarRentalDueHighlight) title="At least one rental has a billing date on or before today without a ledger payment logged for that date." @endif>
                     <i class="fa fa-house"></i><span>Rentals</span>
                     @if($sidebarRentalDueHighlight)
                         <span class="menu-rentals__pulse" aria-hidden="true"></span>

@@ -32,17 +32,34 @@
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card{background:var(--card);}
         .rental-card:hover{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));box-shadow:0 8px 24px -18px color-mix(in srgb,var(--primary) 12%,#000);}
         @keyframes rental-card-overdue-pulse{
-            0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 28%,transparent),0 4px 18px -16px color-mix(in srgb,#ea580c 32%,rgba(0,0,0,.35));}
-            50%{box-shadow:0 0 0 1px color-mix(in srgb,#fb923c 55%,transparent),0 8px 26px -14px color-mix(in srgb,#f97316 36%,rgba(0,0,0,.35));}
+            0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,#f87171 32%,transparent),0 4px 18px -16px color-mix(in srgb,#ef4444 28%,rgba(0,0,0,.35));}
+            50%{box-shadow:0 0 0 1px color-mix(in srgb,#ef4444 58%,transparent),0 8px 26px -14px color-mix(in srgb,#dc2626 34%,rgba(0,0,0,.35));}
         }
-        .rental-card--overdue{border-color:color-mix(in srgb,#fb923c 58%,var(--border));animation:rental-card-overdue-pulse 2.4s ease-in-out infinite;}
-        .rental-card--overdue .rental-card__ribbon{width:5px;background:linear-gradient(180deg,#f97316 0%,#ef4444 45%,#fdba74 100%);}
+        @keyframes rental-card-ribbon-overdue-wave{
+            0%,100%{background-position:0% 0%;opacity:1;}
+            50%{background-position:0% 100%;opacity:.92;}
+        }
+        .rental-card--overdue{border-color:color-mix(in srgb,#ef4444 58%,var(--border));animation:rental-card-overdue-pulse 2.4s ease-in-out infinite;}
+        /* Left stripe widens + animated gradient sweep (loan-style overdue cue, rental red palette) */
+        .rental-card--overdue .rental-card__ribbon{
+            width:5px;
+            background:linear-gradient(180deg,#ef4444 0%,#991b1b 38%,#f87171 100%);
+            background-size:100% 220%;
+            animation:rental-card-ribbon-overdue-wave 1.85s ease-in-out infinite;
+            box-shadow:inset -1px 0 0 color-mix(in srgb,#fecaca 35%,transparent);
+        }
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card--overdue .rental-card__ribbon{
+            background:linear-gradient(180deg,#dc2626 0%,#b91c1c 42%,#fca5a5 100%);
+            background-size:100% 220%;
+        }
         @media (prefers-reduced-motion:reduce){
             .rental-card--overdue{animation:none;}
+            .rental-card--overdue .rental-card__ribbon{animation:none;}
         }
         .rental-card__ribbon{position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 42%,#1e293b));pointer-events:none;}
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card__ribbon{background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 25%,var(--text)));}
         .rental-card__hit{flex:1;min-width:0;margin-left:3px;text-decoration:none;color:inherit;display:flex;align-items:center;}
+        .rental-card--overdue .rental-card__hit{margin-left:5px;}
         .rental-card__hit:focus-visible{outline:2px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px;border-radius:8px;}
         .rental-card__inner{padding:10px 8px 10px 14px;display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;width:100%;box-sizing:border-box;}
         .rental-card__tail{display:flex;align-items:center;padding:10px 12px 10px 4px;flex-shrink:0;gap:8px;border-left:1px solid color-mix(in srgb,var(--border) 70%,transparent);}
@@ -51,8 +68,20 @@
         .rental-card__title{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em;line-height:1.2;display:inline-flex;align-items:center;gap:6px;color:var(--text);}
         .rental-card__title .fa-building{color:var(--primary);opacity:.9;font-size:13px;}
         .rental-card__pill{display:inline-flex;align-items:center;gap:3px;margin:0;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:color-mix(in srgb,var(--primary) 72%,var(--text));padding:3px 7px;border-radius:999px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--border));background:color-mix(in srgb,var(--primary) 7%,transparent);line-height:1.2;}
-        .rental-card__pill--overdue{border-color:color-mix(in srgb,#f97316 55%,var(--border));background:color-mix(in srgb,#f97316 16%,transparent);color:color-mix(in srgb,#fed7aa 75%,var(--text));}
-        :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card__pill--overdue{color:#9a3412;}
+        .rental-card__pill--overdue{
+            border-color:color-mix(in srgb,#ef4444 58%,var(--border));
+            background:color-mix(in srgb,#ef4444 18%,transparent);
+            color:color-mix(in srgb,#fecaca 78%,var(--text));
+            animation:rental-card-pill-overdue 2s ease-in-out infinite;
+        }
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .rental-card__pill--overdue{color:#991b1b;}
+        @keyframes rental-card-pill-overdue{
+            0%,100%{opacity:1;transform:scale(1);}
+            50%{opacity:.9;transform:scale(1.02);}
+        }
+        @media (prefers-reduced-motion:reduce){
+            .rental-card__pill--overdue{animation:none;}
+        }
         .rental-card__meta{margin:4px 0 0;font-size:11px;line-height:1.35;color:var(--muted);}
         .rental-card__aside{display:flex;align-items:center;gap:14px;margin-left:auto;flex-wrap:wrap;text-align:right;}
         .rental-card__cost{text-align:right;min-width:7.5rem;}
@@ -160,7 +189,7 @@
                                             <h3 class="rental-card__title"><i class="fa fa-building" aria-hidden="true"></i> {{ $rental->property_type }}</h3>
                                             <span class="rental-card__pill"><i class="fa fa-clock" style="opacity:.85;" aria-hidden="true"></i>{{ $recurringTypes[$rental->recurring_type] ?? $rental->recurring_type }}</span>
                                             @if($rentalPaymentOverdue[$rental->id] ?? false)
-                                                <span class="rental-card__pill rental-card__pill--overdue" title="A billing date before today has no ledger payment logged for that date."><i class="fa fa-circle-exclamation" style="font-size:.95em;" aria-hidden="true"></i> Overdue</span>
+                                                <span class="rental-card__pill rental-card__pill--overdue" title="A billing date on or before today has no ledger payment logged for that date."><i class="fa fa-circle-exclamation" style="font-size:.95em;" aria-hidden="true"></i> Overdue</span>
                                             @endif
                                         </div>
                                         <p class="rental-card__meta">{{ implode(' · ', array_filter($listMetaParts)) }}</p>
