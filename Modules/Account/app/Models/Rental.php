@@ -5,8 +5,10 @@ namespace Modules\Account\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Business\Models\Branch;
 use Modules\Business\Models\Business;
+use Modules\Transaction\Models\LedgerTransaction;
 
 class Rental extends Model
 {
@@ -56,6 +58,12 @@ class Rental extends Model
     public function deductAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'deduct_account_id');
+    }
+
+    public function ledgerTransactions(): MorphMany
+    {
+        return $this->morphMany(LedgerTransaction::class, 'transactionable')
+            ->orderByDesc('occurrence_date');
     }
 
     public static function recurringTypes(): array

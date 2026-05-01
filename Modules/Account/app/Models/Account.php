@@ -25,6 +25,13 @@ class Account extends Model
         'notes',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'current_balance' => 'decimal:2',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -74,7 +81,7 @@ class Account extends Model
         }
 
         $balance = number_format((float) $this->current_balance, 2);
-        $segments[] = 'Balance ' . $balance;
+        $segments[] = 'Balance '.$balance;
 
         $loc = trim((string) ($this->warehouse?->name ?? ''));
         if ($loc !== '') {

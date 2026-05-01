@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Transaction\Services\LoanRecurringDeductionService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class TransactionServiceProvider extends ModuleServiceProvider
@@ -16,15 +17,6 @@ class TransactionServiceProvider extends ModuleServiceProvider
      * The lowercase version of the module name.
      */
     protected string $nameLower = 'transaction';
-
-    /**
-     * Command classes to register.
-     *
-     * @var string[]
-     */
-    protected array $commands = [
-        \Modules\Transaction\Console\Commands\ProcessLoanRecurringDeductionsCommand::class,
-    ];
 
     /**
      * Provider classes to register.
@@ -41,6 +33,11 @@ class TransactionServiceProvider extends ModuleServiceProvider
      */
     protected function configureSchedules(Schedule $schedule): void
     {
-        $schedule->command('loans:process-recurring-deductions')->dailyAt('00:10');
+        $schedule->call(static function (): void {
+            app(LoanRecurringDeductionService::class)->run();
+        })
+            ->name('loan-recurring-deductions')
+            ->dailyAt('00:10')
+            ->withoutOverlapping();
     }
 }

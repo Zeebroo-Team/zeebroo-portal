@@ -3,14 +3,17 @@
 namespace Modules\Transaction\Services;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Modules\Account\Models\Account;
 use Modules\Account\Models\Loan;
+use Modules\Account\Services\AccountService;
 use Modules\Account\Services\LoanOverviewTooltipService;
-use Modules\Transaction\Models\LoanDeductionTransaction;
 
 class LoanRecurringDeductionService
 {
     public function __construct(
         private readonly LoanOverviewTooltipService $loanSchedule,
+        private readonly AccountService $accountService,
     ) {}
 
     /** @return array{processed_loans:int, entries_created:int} */
@@ -91,29 +94,44 @@ class LoanRecurringDeductionService
         string $cadenceSnapshot,
         int $periodsTotal,
     ): int {
-        $exists = LoanDeductionTransaction::query()
-            ->where('loan_id', $loan->getKey())
-            ->whereDate('deduction_date', $due->toDateString())
-            ->exists();
+        return (int) DB::transaction(function () use (
+            $loan,
+            $due,
+            $periodIndex,
+            $amount,
+            $currency,
+            $cadenceSnapshot,
+            $periodsTotal
+        ): int {
+            $account = Account::query()
+                ->whereKey((int) $loan->deduct_account_id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($exists) {
-            return 0;
-        }
+            if ($loan->ledgerTransactions()
+                ->whereDate('occurrence_date', $due->toDateString())
+                ->exists()) {
+                return 0;
+            }
 
-        LoanDeductionTransaction::query()->create([
-            'business_id' => $loan->business_id,
-            'user_id' => $loan->user_id,
-            'loan_id' => $loan->getKey(),
-            'deduct_account_id' => $loan->deduct_account_id,
-            'deduction_date' => $due->toDateString(),
-            'period_number' => $periodIndex,
-            'amount' => $amount,
-            'currency' => $currency !== '' ? $currency : null,
-            'cadence_snapshot' => $cadenceSnapshot,
-            'periods_total_snapshot' => $periodsTotal,
-            'borrowed_principal_snapshot' => (float) $loan->borrowed_amount,
-        ]);
+            $this->accountService->applyBalanceDeduction($account, $amount);
 
-        return 1;
+            $loan->ledgerTransactions()->create([
+                'business_id' => $loan->business_id,
+                'user_id' => $loan->user_id,
+                'deduct_account_id' => $loan->deduct_account_id,
+                'occurrence_date' => $due->toDateString(),
+                'period_number' => $periodIndex,
+                'amount' => $amount,
+                'currency' => $currency !== '' ? $currency : null,
+                'cadence_snapshot' => $cadenceSnapshot,
+                'periods_total_snapshot' => $periodsTotal,
+                'meta' => [
+                    'borrowed_principal_snapshot' => (float) $loan->borrowed_amount,
+                ],
+            ]);
+
+            return 1;
+        });
     }
 }
