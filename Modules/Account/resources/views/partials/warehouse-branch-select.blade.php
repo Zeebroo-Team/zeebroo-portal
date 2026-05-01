@@ -3,7 +3,7 @@
     $branchIdPreset = $presetBranchId ?? old('branch_id');
 @endphp
 
-<div id="acct-warehouse-wrap" style="display:none;margin-top:10px;">
+<div id="acct-warehouse-wrap" style="display:none;margin-top:10px;"@if(isset($fixedBusinessId)) data-fixed-business-id="{{ $fixedBusinessId }}"@endif>
     <label for="acct-warehouse-branch-id" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;color:var(--muted);">Warehouse / branch</label>
     <select id="acct-warehouse-branch-id" name="branch_id" data-acct-wh-select class="{{ trim('acct-warehouse-branch-el ' . ($warehouseSelectClass ?? '')) }}">
         <option value="">— Select location —</option>
@@ -15,11 +15,25 @@
     const bizSel = document.querySelector('select[name="business_id"], select.account-onboard-business');
     const wrap = document.getElementById('acct-warehouse-wrap');
     const sel = document.getElementById('acct-warehouse-branch-id');
-    if (!bizSel || !wrap || !sel) return;
+    if (!wrap || !sel) return;
 
     const multiWare = @json($accountBusinessMultiWarehouse ?? []);
     const branches = @json($accountBranchesByBusiness ?? []);
     const preset = @json($branchIdPreset);
+
+    function getBizId() {
+        if (bizSel && bizSel.value) {
+            const n = parseInt(String(bizSel.value), 10);
+            if (n) {
+                return n;
+            }
+        }
+        const fixed = wrap.dataset.fixedBusinessId;
+        if (fixed !== undefined && fixed !== '') {
+            return parseInt(String(fixed), 10) || 0;
+        }
+        return 0;
+    }
 
     function fillOptions(list) {
         sel.innerHTML = '';
@@ -36,8 +50,7 @@
     }
 
     function sync() {
-        const bid = bizSel.value;
-        const bizIdNum = bid ? parseInt(String(bid), 10) : 0;
+        const bizIdNum = getBizId();
 
         const mw = !!(bizIdNum && multiWare[bizIdNum]);
         const list = (mw && bizIdNum && branches[bizIdNum]) ? branches[bizIdNum] : [];
@@ -59,7 +72,9 @@
         }
     }
 
-    bizSel.addEventListener('change', sync);
+    if (bizSel && bizSel.tagName === 'SELECT') {
+        bizSel.addEventListener('change', sync);
+    }
     sync();
 
     sel.form?.addEventListener('submit', () => {

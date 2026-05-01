@@ -454,7 +454,7 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
         <h2 style="margin:0 0 8px;">Do you want manage your business expenses?</h2>
         <p class="muted" style="margin:0 0 14px;">Choose expense categories to start tracking your business spending professionally.</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-            @if(!empty($loanOverviewTooltip))
+            @if($loanOverviewTooltip && ($loanOverviewTooltip['hasLoans'] ?? false))
             <style>
                 #dash-loan-summary-pop{position:fixed;z-index:220;opacity:0;visibility:hidden;width:min(340px,calc(100vw - 20px));max-height:70vh;overflow:auto;pointer-events:none;
                     transition:opacity .14s ease,visibility .14s ease;
@@ -473,7 +473,7 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
                 #dash-loan-summary-trigger{outline:none;border-radius:12px;}
             </style>
             @endif
-            @if(!empty($loanOverviewTooltip))
+            @if($loanOverviewTooltip && ($loanOverviewTooltip['hasLoans'] ?? false))
             <span id="dash-loan-summary-trigger" style="display:block;margin:0;padding:0;">
             @endif
             <a href="{{ route('account.loans.index') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
@@ -481,13 +481,14 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
                 <div style="font-weight:700;"><i class="fa fa-hand-holding-dollar" style="margin-right:6px;"></i>Loan</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Track repayments and interest payments.</div>
             </a>
-            @if(!empty($loanOverviewTooltip))
+            @if($loanOverviewTooltip && ($loanOverviewTooltip['hasLoans'] ?? false))
             </span>
             @endif
-            <div style="border:1px solid var(--border);border-radius:12px;padding:12px;">
+            <a href="{{ route('account.rentals.index') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
+               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
                 <div style="font-weight:700;"><i class="fa fa-house" style="margin-right:6px;"></i>Rentenal</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Manage office/shop monthly rental costs.</div>
-            </div>
+            </a>
             <div style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-file-invoice-dollar" style="margin-right:6px;"></i>Bills</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Record utility and service bill payments.</div>
@@ -591,12 +592,12 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
         }
     @endif
 </script>
-@if(!empty($loanOverviewTooltip))
+@if($loanOverviewTooltip && ($loanOverviewTooltip['hasLoans'] ?? false))
 <script>
 (function () {
     const payload = @json($loanOverviewTooltip);
     const trigger = document.getElementById('dash-loan-summary-trigger');
-    if (!trigger || !payload) return;
+    if (!trigger || !payload || !payload.hasLoans) return;
 
     function esc(s) {
         return String(s ?? '')

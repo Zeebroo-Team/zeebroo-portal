@@ -135,6 +135,7 @@
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="fa fa-gauge-high"></i><span>Overview</span></a>
             @if($showLoanManagement)
                 <a href="{{ route('account.loans.index') }}" class="{{ request()->routeIs('account.loans.*') ? 'active' : '' }}"><i class="fa fa-hand-holding-dollar"></i><span>Loan management</span></a>
+                <a href="{{ route('account.rentals.index') }}" class="{{ request()->routeIs('account.rentals.*') ? 'active' : '' }}"><i class="fa fa-house"></i><span>Rentals</span></a>
             @endif
             @if($navBusiness && $navBusiness->multiWarehouseBranchEnabled())
                 <a href="{{ route('business.branches.index') }}" class="{{ request()->routeIs('business.branches.*') ? 'active' : '' }}"><i class="fa fa-code-branch"></i><span>Branches</span></a>
