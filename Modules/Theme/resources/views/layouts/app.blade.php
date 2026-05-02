@@ -173,6 +173,9 @@
         .switch input:checked + .slider{background:#22c55e}
         .switch input:checked + .slider:before{transform:translateX(20px)}
         .content-inner{padding:28px}
+        /* Full-viewport workspace (e.g. AI chat) inside main chrome */
+        .content--chat-workspace{display:flex;flex-direction:column;min-height:100vh}
+        .content-inner--chat-workspace{flex:1;display:flex;flex-direction:column;min-height:0;padding:0!important}
         .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:920px}
         .muted{color:var(--muted)}
         .chip{display:inline-block;border:1px solid var(--border);padding:6px 12px;border-radius:999px;margin:8px 8px 0 0}
@@ -185,6 +188,7 @@
 <div class="layout">
     @php
         $minimalAppShell = filter_var($minimalAppShell ?? false, FILTER_VALIDATE_BOOLEAN);
+        $chatWorkspace = filter_var($chatWorkspace ?? false, FILTER_VALIDATE_BOOLEAN);
         $navBusiness = \Modules\Business\Models\Business::currentForNavbar(auth()->user());
         $navBusinesses = \Modules\Business\Models\Business::allForNavbar(auth()->user());
         $showSidebarLoansLink = $navBusiness && $navBusiness->loans()->exists();
@@ -224,6 +228,7 @@
         <nav class="menu">
             <div class="menu-section">Main</div>
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="fa fa-gauge-high"></i><span>Overview</span></a>
+            <a href="{{ route('aibot.index') }}" class="{{ request()->routeIs('aibot.*') ? 'active' : '' }}"><i class="fa fa-robot"></i><span>AI Agent</span></a>
             @if($showSidebarLoansLink)
                 <a href="{{ route('account.loans.index') }}" @class([
                     'menu-loan-mgmt',
@@ -290,7 +295,7 @@
         </nav>
     </aside>
     @endunless
-    <main class="content{{ $minimalAppShell ? ' content--minimal' : '' }}">
+    <main class="content{{ $minimalAppShell ? ' content--minimal' : '' }}{{ $chatWorkspace ? ' content--chat-workspace' : '' }}">
         <div class="navbar">
             <div>
                 <div class="navtitle">{{ $heading ?? 'Overview' }}</div>
@@ -448,7 +453,7 @@
                 </div>
             </div>
         </div>
-        <div class="content-inner">
+        <div class="content-inner{{ $chatWorkspace ? ' content-inner--chat-workspace' : '' }}">
             @yield('content')
         </div>
     </main>
