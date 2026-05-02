@@ -494,10 +494,11 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
                 <div style="font-weight:700;"><i class="fa fa-file-invoice-dollar" style="margin-right:6px;"></i>Bills</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Record utility and service bill payments on a schedule.</div>
             </a>
-            <div style="border:1px solid var(--border);border-radius:12px;padding:12px;">
-                <div style="font-weight:700;"><i class="fa fa-users" style="margin-right:6px;"></i>Employee Salary</div>
-                <div class="muted" style="font-size:12px;margin-top:4px;">Track salaries and staff payroll expenses.</div>
-            </div>
+            <a href="{{ route('hr.onboarding') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
+               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-weight:700;"><i class="fa fa-users-gear" style="margin-right:6px;"></i>Employee Salary</div>
+                <div class="muted" style="font-size:12px;margin-top:4px;">Start the payroll wizard or say you manage staff outside SociBiz.</div>
+            </a>
             <div style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-screwdriver-wrench" style="margin-right:6px;"></i>Modification</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Capture renovation or improvement costs.</div>

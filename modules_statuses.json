@@ -4,5 +4,6 @@
     "Business": true,
     "Account": true,
     "Settings": true,
-    "Transaction": true
+    "Transaction": true,
+    "HRManagement": true
 }

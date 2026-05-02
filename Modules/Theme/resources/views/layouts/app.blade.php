@@ -199,6 +199,9 @@
         $sidebarBillDueHighlight = $showSidebarBillsLink && $navBusiness
             ? app(\Modules\Account\Services\BillService::class)->businessHasOverdueBillPayments($navBusiness)
             : false;
+        $hrPayrollOptedIn = $navBusiness
+            ? (bool) get_settings('hr.payroll.opted_in', false, $navBusiness)
+            : false;
         $accounts = $navBusiness
             ? \Modules\Account\Models\Account::with(['bankType', 'bank', 'warehouse'])
                 ->where('user_id', auth()->id())
@@ -254,6 +257,16 @@
                         <span class="menu-rentals__pulse" aria-hidden="true"></span>
                     @endif
                 </a>
+            @endif
+            @if($navBusiness && $hrPayrollOptedIn)
+                <div class="menu-group-title">
+                    <i class="fa fa-users-gear"></i><span>HR</span>
+                </div>
+                <div class="submenu">
+                    <a href="{{ route('hr.index') }}" class="{{ request()->routeIs('hr.index') ? 'active' : '' }}"><i class="fa fa-table-list"></i><span>HR hub</span></a>
+                    <a href="{{ route('hr.employees.index') }}" class="{{ request()->routeIs('hr.employees.*') ? 'active' : '' }}"><i class="fa fa-user-group"></i><span>Employees</span></a>
+                    <a href="{{ route('hr.payroll.index') }}" class="{{ request()->routeIs('hr.payroll.*') ? 'active' : '' }}"><i class="fa fa-money-check-dollar"></i><span>Payroll</span></a>
+                </div>
             @endif
             @if($navBusiness)
                 <a href="{{ route('transactions.index') }}" class="{{ request()->routeIs('transactions.*') ? 'active' : '' }}"><i class="fa fa-arrow-right-arrow-left"></i><span>Transactions</span></a>

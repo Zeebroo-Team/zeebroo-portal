@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Account\Models\Bill;
 use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
+use Modules\HRManagement\Models\Department;
+use Modules\HRManagement\Models\Employee;
+use Modules\HRManagement\Models\JobTitle;
 use Modules\Settings\Concerns\HasSettings;
 
 class Business extends Model
@@ -54,6 +57,21 @@ class Business extends Model
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class)->orderBy('name');
+    }
+
+    public function employees(): HasMany
+    {
+        return $this->hasMany(Employee::class)->orderBy('full_name')->orderBy('id');
+    }
+
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class)->orderBy('name')->orderBy('id');
+    }
+
+    public function jobTitles(): HasMany
+    {
+        return $this->hasMany(JobTitle::class)->orderBy('name')->orderBy('id');
     }
 
     public static function allForNavbar(?User $user): Collection
