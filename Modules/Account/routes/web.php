@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Account\Http\Controllers\AccountController;
+use Modules\Account\Http\Controllers\BillController;
 use Modules\Account\Http\Controllers\LoanController;
 use Modules\Account\Http\Controllers\RentalController;
 
@@ -19,5 +20,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('rentals/{rental}/edit', [RentalController::class, 'edit'])->name('account.rentals.edit');
     Route::patch('rentals/{rental}', [RentalController::class, 'update'])->name('account.rentals.update');
     Route::delete('rentals/{rental}', [RentalController::class, 'destroy'])->name('account.rentals.destroy');
+
+    Route::get('bills', [BillController::class, 'index'])->name('account.bills.index');
+    Route::post('bills', [BillController::class, 'store'])->name('account.bills.store');
+    Route::get('bills/{bill}', [BillController::class, 'show'])->name('account.bills.show');
+    Route::post('bills/{bill}/billing/settle', [BillController::class, 'settleBilling'])->name('account.bills.billing.settle');
+    Route::get('bills/{bill}/edit', [BillController::class, 'edit'])->name('account.bills.edit');
+    Route::patch('bills/{bill}', [BillController::class, 'update'])->name('account.bills.update');
+    Route::delete('bills/{bill}', [BillController::class, 'destroy'])->name('account.bills.destroy');
     Route::resource('accounts', AccountController::class)->names('account');
 });

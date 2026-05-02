@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Modules\Account\Models\Account;
+use Modules\Account\Models\Bill;
 use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
 use Modules\Business\Models\Business;
@@ -64,6 +65,9 @@ class LedgerTransaction extends Model
         if ($subject instanceof Rental) {
             return 'Rental';
         }
+        if ($subject instanceof Bill) {
+            return 'Bill';
+        }
 
         return $this->transactionable_type
             ? class_basename($this->transactionable_type)
@@ -85,6 +89,11 @@ class LedgerTransaction extends Model
             ]);
 
             return $parts !== [] ? implode(' · ', $parts) : ('Rental #'.$subject->getKey());
+        }
+        if ($subject instanceof Bill) {
+            $name = trim((string) $subject->name);
+
+            return $name !== '' ? $name : ('Bill #'.$subject->getKey());
         }
 
         if ($subject !== null) {

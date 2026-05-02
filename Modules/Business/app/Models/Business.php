@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Account\Models\Bill;
 use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
 use Modules\Settings\Concerns\HasSettings;
@@ -45,6 +46,11 @@ class Business extends Model
         return $this->hasMany(Rental::class);
     }
 
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class);
+    }
+
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class)->orderBy('name');
@@ -52,7 +58,7 @@ class Business extends Model
 
     public static function allForNavbar(?User $user): Collection
     {
-        if (!$user) {
+        if (! $user) {
             return new Collection([]);
         }
 
@@ -70,7 +76,7 @@ class Business extends Model
      */
     public static function currentForNavbar(?User $user): ?static
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 

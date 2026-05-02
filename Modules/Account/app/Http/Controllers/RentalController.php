@@ -12,8 +12,10 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\Account\Models\Account;
+use Modules\Account\Models\Bill;
 use Modules\Account\Models\Rental;
 use Modules\Account\Services\AddressBookService;
+use Modules\Account\Services\BillService;
 use Modules\Account\Services\RentalService;
 use Modules\Business\Models\Business;
 use Modules\Transaction\Services\RentalManualRentSettlementService;
@@ -24,6 +26,7 @@ class RentalController extends Controller
         private readonly RentalService $rentalService,
         private readonly AddressBookService $addressBookService,
         private readonly RentalManualRentSettlementService $rentalRentSettlementService,
+        private readonly BillService $billService,
     ) {}
 
     public function index(Request $request)
@@ -76,14 +79,22 @@ class RentalController extends Controller
             ->orderBy('account_name')
             ->get();
 
+        $rentalBillPaymentOverdue = [];
+        foreach ($rentalModel->bills as $linkedBill) {
+            $rentalBillPaymentOverdue[(int) $linkedBill->id] = $this->billService->billHasOverduePayments($linkedBill);
+        }
+
         return view('account::rentals.show', [
             'business' => $business,
             'rental' => $rentalModel,
             'accounts' => $accounts,
             'recurringTypes' => Rental::recurringTypes(),
+            'billRecurringLabels' => Bill::recurringTypes(),
+            'billPaymentModes' => Bill::paymentModes(),
             'nextPaymentInsight' => $nextPaymentInsight,
             'detailCurrency' => (string) (get_settings('business.currency', '', $business) ?: ''),
             'rentalPaymentOverdue' => $rentalPaymentOverdue,
+            'rentalBillPaymentOverdue' => $rentalBillPaymentOverdue,
             'rentalScheduleRows' => $rentalScheduleRows,
             'rentalLedgerRows' => $rentalLedgerRows,
         ]);

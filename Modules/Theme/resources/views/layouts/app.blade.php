@@ -195,6 +195,10 @@
         $sidebarRentalDueHighlight = $showSidebarRentalsLink && $navBusiness
             ? app(\Modules\Account\Services\RentalService::class)->businessHasOverdueRentalPayments($navBusiness)
             : false;
+        $showSidebarBillsLink = $navBusiness && $navBusiness->bills()->exists();
+        $sidebarBillDueHighlight = $showSidebarBillsLink && $navBusiness
+            ? app(\Modules\Account\Services\BillService::class)->businessHasOverdueBillPayments($navBusiness)
+            : false;
         $accounts = $navBusiness
             ? \Modules\Account\Models\Account::with(['bankType', 'bank', 'warehouse'])
                 ->where('user_id', auth()->id())
@@ -236,6 +240,17 @@
                 ]) @if($sidebarRentalDueHighlight) title="At least one rental has a billing date on or before today without a ledger payment logged for that date." @endif>
                     <i class="fa fa-house"></i><span>Rentals</span>
                     @if($sidebarRentalDueHighlight)
+                        <span class="menu-rentals__pulse" aria-hidden="true"></span>
+                    @endif
+                </a>
+            @endif
+            @if($showSidebarBillsLink)
+                <a href="{{ route('account.bills.index') }}" @class([
+                    'active' => request()->routeIs('account.bills.*'),
+                    'menu-rentals--due' => $sidebarBillDueHighlight,
+                ]) @if($sidebarBillDueHighlight) title="At least one bill has a due date on or before today without a ledger payment logged for that date." @endif>
+                    <i class="fa fa-file-invoice-dollar"></i><span>Bills</span>
+                    @if($sidebarBillDueHighlight)
                         <span class="menu-rentals__pulse" aria-hidden="true"></span>
                     @endif
                 </a>

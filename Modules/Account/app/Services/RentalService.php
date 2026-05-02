@@ -60,6 +60,13 @@ class RentalService
                 'landlord',
                 'ledgerTransactions.deductAccount.bank',
                 'ledgerTransactions.deductAccount.bankType',
+                'bills' => fn ($q) => $q->orderBy('name')
+                    ->with([
+                        'ledgerTransactions',
+                        'deductAccount.bank',
+                        'deductAccount.bankType',
+                        'warehouse',
+                    ]),
             ])
             ->first();
     }

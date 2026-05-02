@@ -28,7 +28,7 @@
         </div>
     @else
         <div class="tx-card">
-            <p class="tx-lead">Polymorphic <strong style="color:var(--text);">ledger</strong> for loans, rentals, and other sources. Loan installments and deduct-account balances are applied <strong style="color:var(--text);">automatically</strong> daily via the Laravel task scheduler (<strong>00:10</strong> server time). Other record types can append rows on the same table via <code style="font-size:11px;">LedgerTransaction</code> / <code style="font-size:11px;">transactionable</code>.</p>
+            <p class="tx-lead">Polymorphic <strong style="color:var(--text);">ledger</strong> for loans, rentals, bills, and other sources. Loan installments and deduct-account balances are applied <strong style="color:var(--text);">automatically</strong> daily via the Laravel task scheduler (<strong>00:10</strong> server time). Other record types can append rows on the same table via <code style="font-size:11px;">LedgerTransaction</code> / <code style="font-size:11px;">transactionable</code>.</p>
 
             @if($transactions instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator && $transactions->isEmpty())
                 <div class="tx-empty">

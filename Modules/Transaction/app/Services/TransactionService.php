@@ -5,6 +5,7 @@ namespace Modules\Transaction\Services;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
+use Modules\Account\Models\Bill;
 use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
 use Modules\Business\Models\Business;
@@ -26,6 +27,7 @@ class TransactionService
                     $morphTo->morphWith([
                         Loan::class => ['bank'],
                         Rental::class => ['warehouse'],
+                        Bill::class => ['warehouse'],
                     ]);
                 },
                 'deductAccount.bankType',

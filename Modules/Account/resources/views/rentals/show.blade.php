@@ -262,6 +262,7 @@
         .rental-show__tab-btn:hover{color:var(--text);background:color-mix(in srgb,var(--primary) 8%,transparent);}
         #rental-show-tab-overview:checked ~ .rental-show__tablist label[for="rental-show-tab-overview"],
         #rental-show-tab-transaction:checked ~ .rental-show__tablist label[for="rental-show-tab-transaction"],
+        #rental-show-tab-bills:checked ~ .rental-show__tablist label[for="rental-show-tab-bills"],
         #rental-show-tab-land:checked ~ .rental-show__tablist label[for="rental-show-tab-land"]{
             color:color-mix(in srgb,var(--primary) 72%,var(--text));
             background:color-mix(in srgb,var(--primary) 14%,var(--card));
@@ -270,12 +271,14 @@
         }
         :is(html[data-theme="light"],html[data-theme="light_blue"]) #rental-show-tab-overview:checked ~ .rental-show__tablist label[for="rental-show-tab-overview"],
         :is(html[data-theme="light"],html[data-theme="light_blue"]) #rental-show-tab-transaction:checked ~ .rental-show__tablist label[for="rental-show-tab-transaction"],
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) #rental-show-tab-bills:checked ~ .rental-show__tablist label[for="rental-show-tab-bills"],
         :is(html[data-theme="light"],html[data-theme="light_blue"]) #rental-show-tab-land:checked ~ .rental-show__tablist label[for="rental-show-tab-land"]{
             background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.06);
         }
         .rental-show__tabpanel{display:none;margin-top:10px;}
         #rental-show-tab-overview:checked ~ .rental-show__tabpanel--overview,
         #rental-show-tab-transaction:checked ~ .rental-show__tabpanel--transaction,
+        #rental-show-tab-bills:checked ~ .rental-show__tabpanel--bills,
         #rental-show-tab-land:checked ~ .rental-show__tabpanel--land{display:block;}
         .rental-show__highlight{margin-top:0;}
         .rental-show__empty-muted{margin:0;font-size:var(--rs-font-sm);line-height:1.42;color:var(--muted);padding:10px;border-radius:var(--rs-radius-sm);
@@ -445,11 +448,13 @@
     <div class="rental-show__tabs">
         <input type="radio" name="rental-show-tab" id="rental-show-tab-overview" class="rental-show__tab-input" checked>
         <input type="radio" name="rental-show-tab" id="rental-show-tab-transaction" class="rental-show__tab-input">
+        <input type="radio" name="rental-show-tab" id="rental-show-tab-bills" class="rental-show__tab-input">
         <input type="radio" name="rental-show-tab" id="rental-show-tab-land" class="rental-show__tab-input">
 
         <div class="rental-show__tablist" role="tablist" aria-label="Rental detail sections">
             <label id="rental-show-tab-label-overview" for="rental-show-tab-overview" class="rental-show__tab-btn" role="tab"><i class="fa fa-layer-group" aria-hidden="true"></i>Overview</label>
             <label id="rental-show-tab-label-transaction" for="rental-show-tab-transaction" class="rental-show__tab-btn" role="tab"><i class="fa fa-money-bill-wave" aria-hidden="true"></i>Transaction details</label>
+            <label id="rental-show-tab-label-bills" for="rental-show-tab-bills" class="rental-show__tab-btn" role="tab"><i class="fa fa-file-invoice-dollar" aria-hidden="true"></i>Linked bills</label>
             <label id="rental-show-tab-label-land" for="rental-show-tab-land" class="rental-show__tab-btn" role="tab"><i class="fa fa-map-location-dot" aria-hidden="true"></i>Land details</label>
         </div>
 
@@ -545,7 +550,7 @@
                         <div class="rental-show__mini">
                             <span class="rental-show__mini-ico" aria-hidden="true"><i class="fa fa-circle-info"></i></span>
                             <div>
-                                <span class="rental-show__mini-txt">Open <strong>Transaction details</strong> for billing and <strong>Land details</strong> for premises &amp; landlord.</span>
+                                <span class="rental-show__mini-txt">Open <strong>Transaction details</strong> for rent billing, <strong>Linked bills</strong> for property-tied invoices, and <strong>Land details</strong> for premises &amp; landlord.</span>
                                 <span class="rental-show__mini-sub">Quick summary</span>
                             </div>
                         </div>
@@ -752,6 +757,80 @@
                         </div>
                     </section>
                 @endif
+            </div>
+        </div>
+
+        <div class="rental-show__tabpanel rental-show__tabpanel--bills" role="tabpanel" id="rental-show-panel-bills" aria-labelledby="rental-show-tab-label-bills">
+            <div class="rental-show__panels" style="grid-template-columns:1fr;">
+                <section class="rental-show__panel" aria-labelledby="rental-linked-bills-heading">
+                    <h2 class="rental-show__panel-h" id="rental-linked-bills-heading"><i class="fa fa-file-invoice-dollar" aria-hidden="true"></i>Linked bills</h2>
+                    <div class="rental-show__panel-body">
+                        <p class="rental-show__tx-lead">Bills you attached to this rental (utilities, services, charges). Recording payments stays on each bill&apos;s schedule and ledger.</p>
+                        @if($rental->bills->isEmpty())
+                            <p class="rental-show__empty-muted" style="margin-top:10px;">
+                                No bills are linked yet. When you <a href="{{ route('account.bills.index') }}" style="color:inherit;font-weight:700;">add or edit a bill</a>,
+                                enable <strong>Link to a rental record</strong> and choose <strong>{{ $rental->property_type }}</strong>.
+                            </p>
+                        @else
+                            <div class="rental-show__tx-scroll" style="max-height:none;">
+                                <table class="rental-show__tx-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Bill</th>
+                                            <th>Type</th>
+                                            <th>Schedule</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th class="rental-show__tx-cell-actions">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($rental->bills as $rBill)
+                                            @php($billOv = ($rentalBillPaymentOverdue[$rBill->id] ?? false))
+                                            <tr @class(['rental-show__tx-row--late' => $billOv])>
+                                                <td><strong>{{ $rBill->name }}</strong>@if($rBill->description)<br><span class="rental-show__dd--soft" style="font-size:11px;line-height:1.35;">{{ \Illuminate\Support\Str::limit((string) $rBill->description, 96) }}</span>@endif</td>
+                                                <td><span style="white-space:nowrap;">{{ \Illuminate\Support\Str::limit($rBill->categoryDisplayLabel(), 26) }}</span></td>
+                                                <td>
+                                                    @if($rBill->isOneTime())
+                                                        {{ $billPaymentModes[$rBill->payment_mode] ?? $rBill->payment_mode }}
+                                                    @else
+                                                        {{ $billRecurringLabels[$rBill->recurring_type] ?? $rBill->recurring_type }}
+                                                    @endif
+                                                </td>
+                                                <td class="rental-show__tx-amt">
+                                                    @if($rBill->amount_varies_by_usage)
+                                                        Varies
+                                                        @if((float) $rBill->recurring_cost > 0)
+                                                            <span style="font-weight:600;"> (~ {{ trim(($detailCurrency ? $detailCurrency.' ' : '').number_format((float) $rBill->recurring_cost, 2, '.', ',')) }} typical)</span>
+                                                        @endif
+                                                    @else
+                                                        @if($detailCurrency)
+                                                            <span style="opacity:.72;font-size:10px;">{{ $detailCurrency }}</span>
+                                                        @endif
+                                                        {{ number_format((float) $rBill->recurring_cost, 2, '.', ',') }}
+                                                        @if($rBill->isOneTime())
+                                                            <span style="display:block;font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;">One-time total</span>
+                                                        @endif
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($billOv)
+                                                        <span class="rental-show__tx-status rental-show__tx-status--late"><i class="fa fa-circle-exclamation" aria-hidden="true"></i>Overdue</span>
+                                                    @else
+                                                        <span class="rental-show__tx-status rental-show__tx-status--open"><i class="fa fa-circle-check" aria-hidden="true"></i>No overdue</span>
+                                                    @endif
+                                                </td>
+                                                <td class="rental-show__tx-cell-actions">
+                                                    <a href="{{ route('account.bills.show', $rBill) }}" class="rental-show__tx-btn rental-show__tx-btn--go"><i class="fa fa-file-lines" aria-hidden="true"></i>View bill</a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </section>
             </div>
         </div>
 
