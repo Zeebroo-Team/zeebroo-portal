@@ -4,7 +4,8 @@
 <div class="aibot-root"
      data-business-name="{{ e($businessLabel) }}"
      data-chat-url="{{ route('aibot.chat') }}"
-     data-csrf="{{ csrf_token() }}">
+     data-csrf="{{ csrf_token() }}"
+     data-tts-available="{{ filter_var(config('aibot.gemini.reply_audio_enabled', false), FILTER_VALIDATE_BOOLEAN) ? '1' : '0' }}">
     <div class="aibot-main">
         <div class="aibot-thread" id="aibot-thread" tabindex="0" aria-live="polite">
             <div class="aibot-welcome" id="aibot-welcome">
@@ -27,10 +28,19 @@
                 @csrf
                 <label class="sr-only" for="aibot-input">Message</label>
                 <textarea id="aibot-input" class="aibot-input" rows="1" placeholder="Message AI Agent…" maxlength="32000"></textarea>
+                <button type="button" class="aibot-mic" id="aibot-mic" aria-pressed="false" aria-label="Record voice message" title="Hold or tap twice: record, then sends when you stop">
+                    <i class="fa fa-microphone"></i>
+                </button>
                 <button type="submit" class="aibot-send" id="aibot-send" aria-label="Send message">
                     <i class="fa fa-arrow-up"></i>
                 </button>
             </form>
+            <p id="aibot-speak-row" class="aibot-speak-row muted" @unless(filter_var(config('aibot.gemini.reply_audio_enabled', false), FILTER_VALIDATE_BOOLEAN)) hidden @endunless>
+                <label class="aibot-read-aloud-label">
+                    <input type="checkbox" id="aibot-speak-check" checked>
+                    Read replies aloud (Gemini)
+                </label>
+            </p>
             <p class="aibot-disclaimer muted">AI can make mistakes. Verify important finance or compliance answers.</p>
         </div>
     </div>
@@ -161,6 +171,13 @@
         box-shadow:0 -12px 32px rgba(0,0,0,.08);
     }
     .aibot-composer{display:flex;align-items:flex-end;gap:10px;max-width:780px;margin:0 auto;background:color-mix(in srgb,var(--card) 95%,transparent);border:1px solid var(--border);border-radius:18px;padding:10px 10px 10px 16px;}
+    .aibot-mic{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);flex-shrink:0;background:color-mix(in srgb,var(--card) 88%,transparent);color:var(--text);cursor:pointer;display:grid;place-items:center;transition:border-color .15s,background .15s,color .15s;}
+    .aibot-mic:hover{border-color:color-mix(in srgb,var(--primary) 42%,var(--border));background:color-mix(in srgb,var(--primary) 10%,transparent);color:var(--primary);}
+    .aibot-mic.is-recording{border-color:#b91c1c;background:#fee2e2;color:#b91c1c;animation:aibot-rec-pulse 1.2s ease-in-out infinite;}
+    @keyframes aibot-rec-pulse{0%,100%{opacity:1;}50%{opacity:.72;}}
+    .aibot-speak-row{font-size:12px;margin:6px auto 0;max-width:780px;display:flex;justify-content:center;}
+    .aibot-read-aloud-label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
+    .aibot-read-aloud-label input{accent-color:var(--primary);}
     .aibot-input{
         flex:1;
         resize:none;border:none;background:transparent;color:var(--text);
@@ -198,14 +215,22 @@
     if (!root) return;
     const chatUrl = root.dataset.chatUrl || '';
     const csrfToken = root.dataset.csrf || '';
+    const speakCheckbox = document.getElementById('aibot-speak-check');
     const welcome = document.getElementById('aibot-welcome');
     const messagesEl = document.getElementById('aibot-messages');
     const thread = document.getElementById('aibot-thread');
     const form = document.getElementById('aibot-form');
     const input = document.getElementById('aibot-input');
+    const micBtn = document.getElementById('aibot-mic');
     const newChatBtn = document.getElementById('aibot-new-chat');
     let conversation = [];
     let busy = false;
+    /** @type {MediaRecorder | null} */
+    let voiceRecorder = null;
+    /** @type {BlobPart[]} */
+    let voiceChunks = [];
+    let recordingVoice = false;
+    let recordingMimeType = 'audio/webm';
 
     function escapeHtml(text) {
         const d = document.createElement('div');
@@ -219,7 +244,38 @@
         messagesEl.hidden = false;
     }
 
+    function discardActiveVoiceRecording() {
+        if (!recordingVoice && !voiceRecorder && !finalizeVoiceRecording._stream) return;
+
+        var stream = finalizeVoiceRecording._stream || null;
+        finalizeVoiceRecording._stream = null;
+        recordingVoice = false;
+
+        if (voiceRecorder) {
+            voiceRecorder.onstop = function () {};
+            try {
+                if (voiceRecorder.state === 'recording') {
+                    voiceRecorder.stop();
+                }
+            } catch (_) {}
+        }
+
+        if (stream && stream.getTracks) {
+            stream.getTracks().forEach(function (t) {
+                t.stop();
+            });
+        }
+
+        voiceRecorder = null;
+        voiceChunks = [];
+        if (micBtn) {
+            micBtn.classList.remove('is-recording');
+            micBtn.setAttribute('aria-pressed', 'false');
+        }
+    }
+
     function showWelcome() {
+        discardActiveVoiceRecording();
         welcome.hidden = false;
         messagesEl.hidden = true;
         messagesEl.innerHTML = '';
@@ -252,6 +308,130 @@
         return row;
     }
 
+    function normalizeSpeakReplyPayload() {
+        if (root.dataset.ttsAvailable !== '1' || !speakCheckbox) return {};
+        return { speak_reply: !!speakCheckbox.checked };
+    }
+
+    function blobToBase64(blob) {
+        return new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onloadend = function () {
+                const raw = typeof reader.result === 'string' ? reader.result : '';
+                const idx = raw.indexOf(',');
+                resolve(idx !== -1 ? raw.slice(idx + 1) : raw);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function chooseRecorderMimeType() {
+        if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
+            return '';
+        }
+        var list = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+        for (var i = 0; i < list.length; i++) {
+            if (MediaRecorder.isTypeSupported(list[i])) return list[i];
+        }
+        return '';
+    }
+
+    function playGeminiVoiceReply(replyAudio) {
+        if (!replyAudio || typeof replyAudio.data !== 'string' || !replyAudio.data) return;
+        try {
+            var url =
+                'data:' +
+                (replyAudio.mime || 'audio/wav') +
+                ';base64,' +
+                replyAudio.data;
+            var a = new Audio(url);
+            a.play().catch(function () {});
+        } catch (_) {}
+    }
+
+    async function finalizeVoiceRecording() {
+        var stream = finalizeVoiceRecording._stream || null;
+        finalizeVoiceRecording._stream = null;
+        recordingVoice = false;
+        if (micBtn) {
+            micBtn.classList.remove('is-recording');
+            micBtn.setAttribute('aria-pressed', 'false');
+        }
+
+        try {
+            if (!voiceChunks.length) return;
+            var blob = new Blob(voiceChunks, { type: recordingMimeType || 'audio/webm' });
+            if (blob.size < 256) return;
+            var mime = blob.type || recordingMimeType || 'audio/webm';
+            var normalizedMime = mime.indexOf(';') !== -1 ? mime.split(';')[0] : mime;
+            var b64 = await blobToBase64(blob);
+            await submitPrompt('', { audioBase64: b64, mimeType: normalizedMime });
+        } catch (err) {
+            window.console.error('voice encode failed', err);
+        }
+
+        voiceChunks = [];
+        if (stream && stream.getTracks) {
+            stream.getTracks().forEach(function (t) {
+                t.stop();
+            });
+        }
+        voiceRecorder = null;
+    }
+
+    async function toggleVoiceRecording() {
+        if (
+            typeof navigator.mediaDevices === 'undefined' ||
+            !navigator.mediaDevices.getUserMedia ||
+            typeof MediaRecorder === 'undefined'
+        ) {
+            var row = appendTypingRow();
+            replaceTypingWithAi('Voice recording is not available in this browser.', row);
+
+            return;
+        }
+        if (busy) return;
+
+        if (!recordingVoice) {
+            try {
+                var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                var mimePick = chooseRecorderMimeType();
+                recordingMimeType = mimePick || 'audio/webm';
+                voiceChunks = [];
+                voiceRecorder =
+                    mimePick !== ''
+                        ? new MediaRecorder(stream, { mimeType: mimePick })
+                        : new MediaRecorder(stream);
+
+                finalizeVoiceRecording._stream = stream;
+                recordingMimeType = voiceRecorder.mimeType || recordingMimeType;
+
+                voiceRecorder.ondataavailable = function (ev) {
+                    if (ev.data && ev.data.size) voiceChunks.push(ev.data);
+                };
+                voiceRecorder.onstop = function () {
+                    void finalizeVoiceRecording();
+                };
+
+                voiceRecorder.start(100);
+                recordingVoice = true;
+                micBtn.classList.add('is-recording');
+                micBtn.setAttribute('aria-pressed', 'true');
+            } catch (_) {
+                var failRow = appendTypingRow();
+                replaceTypingWithAi('Microphone permission is required for voice messages.', failRow);
+            }
+
+            return;
+        }
+
+        if (voiceRecorder && voiceRecorder.state === 'recording') {
+            if (typeof voiceRecorder.requestData === 'function') voiceRecorder.requestData();
+            voiceRecorder.stop();
+        }
+    }
+
     function replaceTypingWithAi(text, typingRow) {
         const bubble = typingRow.querySelector('.aibot-msg-ai');
         if (bubble) bubble.innerHTML = escapeHtml(text);
@@ -271,17 +451,33 @@
         }
     }
 
-    async function submitPrompt(text) {
+    /**
+     * @param {{ audioBase64: string, mimeType: string } | undefined} voiceOpts
+     */
+    async function submitPrompt(text, voiceOpts) {
         const trimmed = text.trim();
-        if (!trimmed || busy || !chatUrl) return;
+        if ((!voiceOpts && !trimmed) || busy || !chatUrl) return;
+
+        var displayUser = voiceOpts ? 'Voice message' : trimmed;
 
         busy = true;
         form.classList.add('aibot-form--busy');
-        conversation.push({ role: 'user', content: trimmed });
-        const userRow = appendUserBubble(trimmed);
-        input.value = '';
-        resizeInput();
-        const typingRow = appendTypingRow();
+
+        if (voiceOpts) {
+            conversation.push({
+                role: 'user',
+                content: trimmed,
+                audio: { base64: voiceOpts.audioBase64, mime_type: voiceOpts.mimeType },
+            });
+        } else {
+            conversation.push({ role: 'user', content: trimmed });
+            input.value = '';
+            resizeInput();
+        }
+
+        var userRow = appendUserBubble(displayUser);
+        var typingRow = appendTypingRow();
+        var requestBody = Object.assign({ messages: conversation }, normalizeSpeakReplyPayload());
 
         try {
             const res = await fetch(chatUrl, {
@@ -293,7 +489,7 @@
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ messages: conversation }),
+                body: JSON.stringify(requestBody),
             });
             const data = await res.json().catch(function () {
                 return {};
@@ -313,10 +509,10 @@
                 typingRow.remove();
                 userRow.remove();
                 refreshEmptyThreadState();
-                appendUserBubble(trimmed);
+                appendUserBubble(displayUser);
                 const errTyping = appendTypingRow();
                 replaceTypingWithAi(msg, errTyping);
-                conversation.push({ role: 'user', content: trimmed });
+                conversation.push({ role: 'user', content: displayUser });
 
                 return;
             }
@@ -328,20 +524,34 @@
                     (data && data.error) ||
                     'No reply from the agent.';
                 replaceTypingWithAi(msg, typingRow);
+                var lastEmpty = conversation.length - 1;
+                if (
+                    lastEmpty >= 0 &&
+                    conversation[lastEmpty].role === 'user' &&
+                    conversation[lastEmpty].audio
+                ) {
+                    conversation[lastEmpty] = { role: 'user', content: '(Voice question)' };
+                }
                 return;
             }
 
             conversation.push({ role: 'assistant', content: reply });
             replaceTypingWithAi(reply, typingRow);
+            playGeminiVoiceReply(data.reply_audio);
+
+            var uIdx = conversation.length - 2;
+            if (uIdx >= 0 && conversation[uIdx].role === 'user' && conversation[uIdx].audio) {
+                conversation[uIdx] = { role: 'user', content: '(Voice question)' };
+            }
         } catch (err) {
             conversation.pop();
             typingRow.remove();
             userRow.remove();
             refreshEmptyThreadState();
-            appendUserBubble(trimmed);
+            appendUserBubble(displayUser);
             const errTyping = appendTypingRow();
             replaceTypingWithAi('Network error: ' + (err && err.message ? err.message : 'unknown'), errTyping);
-            conversation.push({ role: 'user', content: trimmed });
+            conversation.push({ role: 'user', content: displayUser });
         } finally {
             busy = false;
             form.classList.remove('aibot-form--busy');
@@ -371,6 +581,12 @@
     });
 
     newChatBtn.addEventListener('click', showWelcome);
+
+    if (micBtn) {
+        micBtn.addEventListener('click', function () {
+            void toggleVoiceRecording();
+        });
+    }
 
     resizeInput();
 })();

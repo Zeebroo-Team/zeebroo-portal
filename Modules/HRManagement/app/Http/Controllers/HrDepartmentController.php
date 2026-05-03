@@ -8,11 +8,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\Account\Models\Bill;
 use Modules\Business\Models\Business;
 use Modules\HRManagement\Models\Department;
 use Modules\HRManagement\Models\Employee;
+use Modules\HRManagement\Services\DepartmentCostCenterService;
 use Modules\HRManagement\Services\DepartmentEmployeeGrowthChartService;
 use Modules\HRManagement\Services\DepartmentService;
 use Modules\HRManagement\Services\HrPayrollSettingsService;
@@ -23,6 +25,7 @@ class HrDepartmentController extends Controller
         private readonly HrPayrollSettingsService $hrPayrollSettings,
         private readonly DepartmentService $departmentService,
         private readonly DepartmentEmployeeGrowthChartService $departmentGrowthChartService,
+        private readonly DepartmentCostCenterService $departmentCostCenterService,
     ) {}
 
     public function growthOverview(Request $request): RedirectResponse|View
@@ -55,9 +58,12 @@ class HrDepartmentController extends Controller
 
         abort_unless($request->user()->businesses()->whereKey($business->id)->exists(), 403);
 
+        $costCenterReport = $this->departmentCostCenterService->build($business);
+
         return view('hrmanagement::departments.index', [
             'business' => $business,
             'departments' => $business->departments()->withCount('employees')->orderBy('name')->orderBy('id')->get(),
+            'costCenterReport' => $costCenterReport,
         ]);
     }
 
@@ -140,6 +146,17 @@ class HrDepartmentController extends Controller
 
         $departmentGrowthChart = $this->departmentGrowthChartService->buildForDepartment($business, $department);
 
+        $costCenterReport = $this->departmentCostCenterService->build($business);
+        $departmentCostCenterRow = null;
+        if (($costCenterReport['available'] ?? false) === true) {
+            foreach ($costCenterReport['rows'] as $row) {
+                if ((int) $row['department']->id === (int) $department->id) {
+                    $departmentCostCenterRow = $row;
+                    break;
+                }
+            }
+        }
+
         $department->loadMissing(['headEmployee.jobTitle', 'coHeadEmployee.jobTitle']);
 
         $headId = old('head_employee_id', $department->head_employee_id);
@@ -163,6 +180,7 @@ class HrDepartmentController extends Controller
         return view('hrmanagement::departments.show', [
             'business' => $business,
             'department' => $department,
+            'departmentSalaryCurrency' => (string) (get_settings('business.currency', '', $business) ?: ''),
             'members' => $members,
             'recentJoiners' => $recentJoiners,
             'employmentBreakdown' => $employmentBreakdown,
@@ -174,6 +192,8 @@ class HrDepartmentController extends Controller
             'departmentBills' => $departmentBills,
             'departmentBillCurrency' => (string) (get_settings('business.currency', '', $business) ?: ''),
             'departmentGrowthChart' => $departmentGrowthChart,
+            'costCenterReport' => $costCenterReport,
+            'departmentCostCenterRow' => $departmentCostCenterRow,
             'leadershipHeadLabel' => $headEmployeeForField
                 ? $headEmployeeForField->full_name.($headEmployeeForField->jobTitle ? ' · '.$headEmployeeForField->jobTitle->name : '')
                 : '',
@@ -301,6 +321,43 @@ class HrDepartmentController extends Controller
 
         return redirect()->route('hr.departments.show', ['department' => $department, 'tab' => 'management'])
             ->with('status', __('Department name updated.'));
+    }
+
+    public function updateDetails(Request $request, Department $department): RedirectResponse
+    {
+        $business = Business::currentForNavbar($request->user());
+        abort_if($business === null, 403);
+
+        if (! $this->hrPayrollSettings->optedIn($business)) {
+            return redirect()->route('hr.onboarding');
+        }
+
+        abort_unless($request->user()->businesses()->whereKey($business->id)->exists(), 403);
+        abort_unless((int) $department->business_id === (int) $business->id, 404);
+
+        $request->merge([
+            'salary_range_min' => $request->filled('salary_range_min') ? $request->input('salary_range_min') : null,
+            'salary_range_max' => $request->filled('salary_range_max') ? $request->input('salary_range_max') : null,
+        ]);
+
+        $validated = $request->validate([
+            'salary_range_min' => ['nullable', 'numeric', 'min:0'],
+            'salary_range_max' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $min = $validated['salary_range_min'] !== null ? (float) $validated['salary_range_min'] : null;
+        $max = $validated['salary_range_max'] !== null ? (float) $validated['salary_range_max'] : null;
+
+        if ($min !== null && $max !== null && $max < $min) {
+            throw ValidationException::withMessages([
+                'salary_range_max' => __('Maximum must be greater than or equal to minimum.'),
+            ]);
+        }
+
+        $this->departmentService->updateSalaryRange($business, $department, $min, $max);
+
+        return redirect()->route('hr.departments.show', ['department' => $department, 'tab' => 'management'])
+            ->with('status', __('Department details updated.'));
     }
 
     public function attachMembers(Request $request, Department $department): RedirectResponse

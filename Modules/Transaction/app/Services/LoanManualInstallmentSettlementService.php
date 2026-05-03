@@ -82,6 +82,17 @@ class LoanManualInstallmentSettlementService
                 ]);
             }
 
+            $externalMarkExists = $loan->externalInstallmentMarks()
+                ->whereDate('due_date', $occurrence->toDateString())
+                ->lockForUpdate()
+                ->exists();
+
+            if ($externalMarkExists) {
+                throw ValidationException::withMessages([
+                    'occurrence_date' => 'Remove the “already paid” mark before recording a ledger payment.',
+                ]);
+            }
+
             $account = Account::query()
                 ->whereKey($deductAccountId)
                 ->where('user_id', $user->id)

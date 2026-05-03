@@ -12,6 +12,7 @@ use Illuminate\View\View;
 use Modules\Account\Models\Account;
 use Modules\Account\Models\Bank;
 use Modules\Account\Models\Loan;
+use Modules\Account\Services\LoanExternalInstallmentMarkService;
 use Modules\Account\Services\LoanOverviewTooltipService;
 use Modules\Account\Services\LoanService;
 use Modules\Business\Models\Business;
@@ -22,6 +23,7 @@ class LoanController extends Controller
     public function __construct(
         private readonly LoanService $loanService,
         private readonly LoanManualInstallmentSettlementService $installmentSettlementService,
+        private readonly LoanExternalInstallmentMarkService $externalInstallmentMarkService,
     ) {}
 
     public function index(Request $request)
@@ -136,6 +138,60 @@ class LoanController extends Controller
         }
 
         return redirect()->route('account.loans.show', $loanModel)->with('status', 'Installment payment recorded and account balance updated.');
+    }
+
+    public function markInstallmentPaidExternally(Request $request, Loan $loan): RedirectResponse
+    {
+        $user = $request->user();
+        $business = Business::currentForNavbar($user);
+        $loanModel = $this->loanService->loanForUser($user, $loan);
+
+        abort_if($loanModel === null, 403);
+        abort_if($business === null || (int) $loanModel->business_id !== (int) $business->id, 404);
+
+        $validated = $request->validate([
+            'occurrence_date' => ['required', 'date'],
+        ]);
+
+        try {
+            $this->externalInstallmentMarkService->mark(
+                loan: $loanModel,
+                business: $business,
+                user: $user,
+                occurrenceDateYmd: Carbon::parse((string) $validated['occurrence_date'])->toDateString(),
+            );
+        } catch (ValidationException $e) {
+            return redirect()->route('account.loans.show', $loanModel)->withErrors($e->errors())->withInput();
+        }
+
+        return redirect()->route('account.loans.show', $loanModel)->with('status', 'Installment marked as already paid (no ledger entry).');
+    }
+
+    public function unmarkInstallmentPaidExternally(Request $request, Loan $loan): RedirectResponse
+    {
+        $user = $request->user();
+        $business = Business::currentForNavbar($user);
+        $loanModel = $this->loanService->loanForUser($user, $loan);
+
+        abort_if($loanModel === null, 403);
+        abort_if($business === null || (int) $loanModel->business_id !== (int) $business->id, 404);
+
+        $validated = $request->validate([
+            'occurrence_date' => ['required', 'date'],
+        ]);
+
+        try {
+            $this->externalInstallmentMarkService->unmark(
+                loan: $loanModel,
+                business: $business,
+                user: $user,
+                occurrenceDateYmd: Carbon::parse((string) $validated['occurrence_date'])->toDateString(),
+            );
+        } catch (ValidationException $e) {
+            return redirect()->route('account.loans.show', $loanModel)->withErrors($e->errors())->withInput();
+        }
+
+        return redirect()->route('account.loans.show', $loanModel)->with('status', '“Already paid” mark removed for that installment.');
     }
 
     public function store(Request $request): RedirectResponse

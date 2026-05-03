@@ -87,17 +87,32 @@ html.cat-modal-open-html,html.cat-modal-open-html body{overflow:hidden;}
             </form>
         </section>
     @else
+        @php($deptListCurrency = trim((string) get_settings('business.currency', '', $business)))
+        @php($ccReport = $costCenterReport ?? [])
+        @php($ccAvail = (bool) ($ccReport['available'] ?? false))
+        @php($ccCur = (string) ($ccReport['currency'] ?? ''))
+        @php($ccRowsById = [])
+        @if($ccAvail)
+            @foreach(($ccReport['rows'] ?? []) as $_ccRow)
+                @php($ccRowsById[$_ccRow['department']->id] = $_ccRow)
+            @endforeach
+        @endif
         <div class="cat-table-wrap">
             <table class="cat-table">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Employees</th>
-                        <th style="text-align:right;">Actions</th>
+                        <th>{{ __('Department') }}</th>
+                        <th>{{ __('Employees') }}</th>
+                        <th>{{ __('Salary guide') }}</th>
+                        <th>{{ __('Cost center') }}</th>
+                        <th style="text-align:right;">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($departments as $dept)
+                        @php($dmin = $dept->salary_range_min)
+                        @php($dmax = $dept->salary_range_max)
+                        @php($ccRow = $ccRowsById[$dept->id] ?? null)
                         <tr>
                             <td>
                                 <a href="{{ route('hr.departments.show', $dept) }}" style="color:var(--primary);font-weight:700;text-decoration:none;">
@@ -105,6 +120,31 @@ html.cat-modal-open-html,html.cat-modal-open-html body{overflow:hidden;}
                                 </a>
                             </td>
                             <td class="muted">{{ (int) $dept->employees_count }}</td>
+                            <td class="muted" style="font-size:12px;line-height:1.35;white-space:nowrap;">
+                                @if($dmin === null && $dmax === null)
+                                    —
+                                @elseif($dmin !== null && $dmax !== null)
+                                    @if($deptListCurrency !== '')<span style="opacity:.72;text-transform:uppercase;font-size:10px;">{{ $deptListCurrency }}</span> @endif{{ number_format((float) $dmin, 0) }}–{{ number_format((float) $dmax, 0) }}
+                                @elseif($dmin !== null)
+                                    {{ __('Min') }} @if($deptListCurrency !== ''){{ $deptListCurrency }} @endif{{ number_format((float) $dmin, 0) }}
+                                @else
+                                    {{ __('Max') }} @if($deptListCurrency !== ''){{ $deptListCurrency }} @endif{{ number_format((float) $dmax, 0) }}
+                                @endif
+                            </td>
+                            <td class="muted" style="font-size:12px;line-height:1.4;max-width:15rem;">
+                                @if(! $ccAvail)
+                                    <span title="{{ __('Bill–department linking not available') }}">—</span>
+                                @elseif($ccRow === null)
+                                    —
+                                @else
+                                    <span style="font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">
+                                        @if($ccCur !== '')<span style="opacity:.72;text-transform:uppercase;font-size:10px;">{{ $ccCur }}</span> @endif{{ number_format((float) $ccRow['cost_center_total'], 2, '.', ',') }}
+                                    </span>
+                                    <span style="display:block;font-size:11px;opacity:.88;margin-top:3px;font-variant-numeric:tabular-nums;">
+                                        {{ number_format((float) $ccRow['assigned_total'], 2, '.', ',') }} + {{ number_format((float) $ccRow['unallocated_share'], 2, '.', ',') }}
+                                    </span>
+                                @endif
+                            </td>
                             <td style="text-align:right;">
                                 @if(((int) $dept->employees_count) === 0)
                                     <form method="post" action="{{ route('hr.departments.destroy', $dept) }}" style="margin:0;display:inline;" onsubmit="return confirm('Delete this department?');">

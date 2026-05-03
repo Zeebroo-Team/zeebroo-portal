@@ -39,6 +39,12 @@
         .loan-show__status--open{border-color:color-mix(in srgb,var(--border) 90%,transparent);background:color-mix(in srgb,var(--card) 88%,transparent);color:var(--muted);}
         .loan-show__status--late{border-color:color-mix(in srgb,#fb923c 55%,var(--border));background:color-mix(in srgb,#f97316 16%,transparent);color:color-mix(in srgb,#fed7aa 82%,var(--text));}
         :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-show__status--late{color:#9a3412;}
+        .loan-show__status--external-paid{border-color:color-mix(in srgb,#38bdf8 50%,var(--border));background:color-mix(in srgb,#0ea5e9 14%,transparent);color:color-mix(in srgb,#e0f2fe 80%,var(--text));}
+        :is(html[data-theme="light"],html[data-theme="light_blue"]) .loan-show__status--external-paid{color:#0369a1;}
+        .loan-show-modal__mode{display:grid;gap:6px;margin:10px 0 0;}
+        .loan-show-modal__mode label{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text);}
+        .loan-show-modal__mode input{accent-color:var(--primary);}
+        .loan-show__inline-form{display:inline;}
         @keyframes loan-show-row-overdue{
             0%,100%{background-color:color-mix(in srgb,#f97316 11%,transparent);}
             50%{background-color:color-mix(in srgb,#ea580c 17%,transparent);}
@@ -172,9 +178,9 @@
             @if($scheduleRows->isEmpty())
                 <p class="loan-show__empty">Set a first installment due date on the loan to build a schedule.</p>
             @else
-                <p style="margin:0 0 10px;font-size:11px;line-height:1.45;color:var(--muted);max-width:78ch;"><strong style="color:var(--text);">Make payment</strong> posts the installment to your ledger and debits the account you choose. <strong style="color:var(--text);">Paid</strong> means a ledger row already exists for that due date.</p>
+                <p style="margin:0 0 10px;font-size:11px;line-height:1.45;color:var(--muted);max-width:82ch;"><strong style="color:var(--text);">Make payment</strong> posts the installment to your ledger and debits the account you choose. <strong style="color:var(--text);">Already paid</strong> marks the due date as settled without a ledger entry (for cash or external transfers). <strong style="color:var(--text);">Paid</strong> means a ledger row exists; <strong style="color:var(--text);">Already paid (outside ledger)</strong> is a manual mark only.</p>
                 @if($accounts->isEmpty())
-                    <p style="margin:-4px 0 10px;font-size:11px;color:color-mix(in srgb,#f97316 70%,var(--muted));"><i class="fa fa-wallet"></i> Add a business account before you can record payments from here.</p>
+                    <p style="margin:-4px 0 10px;font-size:11px;color:color-mix(in srgb,#f97316 70%,var(--muted));"><i class="fa fa-wallet"></i> Add a business account to use <strong style="color:var(--text);">Make payment</strong> (ledger). You can still use <strong style="color:var(--text);">Already paid</strong> without an account.</p>
                 @endif
                 <div class="loan-show__scroll" style="max-height:400px;">
                     <table class="loan-show__table">
@@ -195,8 +201,10 @@
                                     <td>{{ $srow['due']->format('M j, Y') }}</td>
                                     <td class="loan-show__amt">@if($loanCurrency)<span class="loan-show__tile-cur">{{ $loanCurrency }}</span>@endif{{ $srow['amount_formatted'] }}</td>
                                     <td>
-                                        @if($srow['paid'])
+                                        @if($srow['paid_via_ledger'] ?? false)
                                             <span class="loan-show__status loan-show__status--paid"><i class="fa fa-circle-check"></i>Paid</span>
+                                        @elseif($srow['paid_outside_ledger_only'] ?? false)
+                                            <span class="loan-show__status loan-show__status--external-paid"><i class="fa fa-check-double"></i>Already paid (outside ledger)</span>
                                         @elseif($srow['past_due_unpaid'])
                                             <span class="loan-show__status loan-show__status--late"><i class="fa fa-circle-exclamation"></i>Past due · unpaid</span>
                                         @else
@@ -205,19 +213,32 @@
                                     </td>
                                     <td class="loan-show__cell-actions">
                                         <div class="loan-show__actions">
-                                            @if($srow['paid'] && $leg)
+                                            @if(($srow['paid_via_ledger'] ?? false) && $leg)
                                                 @php($accLabel = $leg->deductAccount?->deductOptionLabel() ?? '—')
                                                 <button type="button" class="loan-show__btn js-loan-payment-open-receipt"
                                                     data-payment-due-human="{{ $srow['due']->format('M j, Y') }}"
                                                     data-payment-amount-fmt="{{ trim($loanCurrency.' '.number_format((float) $leg->amount, 2, '.', ',')) }}"
                                                     data-payment-account="{{ e($accLabel) }}"><i class="fa fa-receipt"></i>View receipt</button>
-                                            @elseif(! $srow['paid'])
+                                            @elseif($srow['paid_outside_ledger_only'] ?? false)
+                                                <form method="post" action="{{ route('account.loans.installments.unmark-external', $loan) }}" class="loan-show__inline-form" onsubmit="return confirm('Remove this mark? The installment will show as unpaid until you record a payment.');">
+                                                    @csrf
+                                                    <input type="hidden" name="occurrence_date" value="{{ $srow['due_ymd'] }}">
+                                                    <button type="submit" class="loan-show__btn"><i class="fa fa-rotate-left"></i>Undo mark</button>
+                                                </form>
+                                            @elseif(! ($srow['paid'] ?? false))
                                                 <button type="button"
                                                     class="loan-show__btn loan-show__btn--go js-loan-payment-open-settle"
                                                     data-occurrence="{{ $srow['due_ymd'] }}"
                                                     data-due-human="{{ $srow['due']->format('M j, Y') }}"
                                                     data-amount-fmt-display="@if($loanCurrency){{ $loanCurrency }} @endif{{ $srow['amount_formatted'] }}"
-                                                    @if($accounts->isEmpty()) disabled title="Add an account first" @endif><i class="fa fa-money-bill-wave"></i>Make payment</button>
+                                                    data-has-accounts="{{ $accounts->isNotEmpty() ? '1' : '0' }}"
+                                                    @if($accounts->isEmpty()) disabled title="Add an account first, or use Already paid" @endif><i class="fa fa-money-bill-wave"></i>Make payment</button>
+                                                <button type="button"
+                                                    class="loan-show__btn js-loan-payment-open-settle-external"
+                                                    data-occurrence="{{ $srow['due_ymd'] }}"
+                                                    data-due-human="{{ $srow['due']->format('M j, Y') }}"
+                                                    data-amount-fmt-display="@if($loanCurrency){{ $loanCurrency }} @endif{{ $srow['amount_formatted'] }}"
+                                                    data-has-accounts="{{ $accounts->isNotEmpty() ? '1' : '0' }}"><i class="fa fa-check"></i>Already paid</button>
                                             @endif
                                         </div>
                                     </td>
@@ -271,9 +292,11 @@
 
 @php($settleModalShouldOpen = $errors->has('occurrence_date') || $errors->has('deduct_account_id'))
 @php($settleDueHumanFromOld = old('occurrence_date') ? \Carbon\Carbon::parse(old('occurrence_date'))->format('M j, Y') : null)
+@php($settleIntent = old('settle_intent', $accounts->isEmpty() ? 'external' : 'ledger'))
 
 <div id="loan-settle-modal"
     class="loan-show-modal{{ $settleModalShouldOpen ? ' loan-show-modal--open' : '' }}"
+    data-has-accounts="{{ $accounts->isNotEmpty() ? '1' : '0' }}"
     role="dialog"
     aria-modal="true"
     aria-labelledby="loan-settle-modal-title"
@@ -281,35 +304,62 @@
     <div class="loan-show-modal__backdrop" data-close-loan-settle tabindex="-1"></div>
     <div class="loan-show-modal__panel">
         <div class="loan-show-modal__head">
-            <h2 id="loan-settle-modal-title">Record installment payment</h2>
+            <h2 id="loan-settle-modal-title">Record installment</h2>
             <button type="button" class="loan-show-modal__close" data-close-loan-settle aria-label="Close">&times;</button>
         </div>
         <div class="loan-show-modal__body">
-            <form method="post" action="{{ route('account.loans.installments.settle', $loan) }}">
-                @csrf
-                <input type="hidden" name="occurrence_date" id="loan-settle-occurrence" value="{{ old('occurrence_date') }}">
-                <div class="loan-show-modal__summ">
-                    <span style="color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Due date</span>
-                    <strong id="loan-settle-due-display" style="font-size:14px;">—</strong>
-                </div>
-                <span class="loan-show-modal__lbl">Installment amount</span>
-                <div class="loan-show-modal__summ" style="margin-top:5px;"><strong id="loan-settle-amount-display">{{ $loanSummary['payment_formatted'] }}</strong></div>
-                <span class="loan-show-modal__lbl">Debit from account</span>
-                @if($accounts->isEmpty())
-                    <p style="margin:8px 0 0;color:var(--muted);">Create an account first (Accounts in your business).</p>
-                @else
-                    <select name="deduct_account_id" id="loan-settle-account" required>
-                        <option value="">Select account…</option>
-                        @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}" {{ (int) old('deduct_account_id', $loan->deduct_account_id) === (int) $acc->id ? 'selected' : '' }}>
-                                {{ $acc->deductOptionLabel() }}
-                            </option>
-                        @endforeach
-                    </select>
-                @endif
-                <button type="submit" class="loan-show-modal__submit" {{ $accounts->isEmpty() ? 'disabled' : '' }}><i class="fa fa-circle-check"></i> Confirm payment</button>
-                <p style="margin:10px 0 0;font-size:10px;color:var(--muted);line-height:1.4;">This creates a ledger row for this due date and reduces the selected account balance by the installment amount.</p>
-            </form>
+            @error('occurrence_date')
+                <p style="margin:0 0 8px;font-size:11px;color:color-mix(in srgb,#f97316 85%,var(--text));">{{ $message }}</p>
+            @enderror
+            @error('deduct_account_id')
+                <p style="margin:0 0 8px;font-size:11px;color:color-mix(in srgb,#f97316 85%,var(--text));">{{ $message }}</p>
+            @enderror
+
+            <div class="loan-show-modal__summ">
+                <span style="color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Due date</span>
+                <strong id="loan-settle-due-display" style="font-size:14px;">{{ $settleDueHumanFromOld ?? '—' }}</strong>
+            </div>
+            <span class="loan-show-modal__lbl">Installment amount</span>
+            <div class="loan-show-modal__summ" style="margin-top:5px;"><strong id="loan-settle-amount-display">{{ $loanSummary['payment_formatted'] }}</strong></div>
+
+            <div class="loan-show-modal__mode js-loan-settle-mode-wrap">
+                <span class="loan-show-modal__lbl" style="margin-top:8px;">Recording option</span>
+                <label><input type="radio" name="loan_settle_ui_mode" value="ledger" class="js-loan-settle-mode" id="loan-settle-mode-ledger" {{ $settleIntent === 'ledger' ? 'checked' : '' }} {{ $accounts->isEmpty() ? 'disabled' : '' }}> Record in ledger (debit account)</label>
+                <label><input type="radio" name="loan_settle_ui_mode" value="external" class="js-loan-settle-mode" id="loan-settle-mode-external" {{ $settleIntent === 'external' ? 'checked' : '' }}> Already paid — no ledger entry</label>
+            </div>
+
+            <div class="js-loan-settle-panel-ledger" @style(['display' => (! $accounts->isEmpty() && $settleIntent === 'ledger') ? 'block' : 'none'])>
+                <form method="post" action="{{ route('account.loans.installments.settle', $loan) }}">
+                    @csrf
+                    <input type="hidden" name="settle_intent" value="ledger">
+                    <input type="hidden" name="occurrence_date" id="loan-settle-occurrence-ledger" class="js-loan-settle-occurrence" value="{{ old('occurrence_date') }}">
+                    <span class="loan-show-modal__lbl">Debit from account</span>
+                    @if($accounts->isEmpty())
+                        <p style="margin:8px 0 0;color:var(--muted);">Create an account first (Accounts in your business), or use “Already paid” above.</p>
+                    @else
+                        <select name="deduct_account_id" id="loan-settle-account" required>
+                            <option value="">Select account…</option>
+                            @foreach($accounts as $acc)
+                                <option value="{{ $acc->id }}" {{ (int) old('deduct_account_id', $loan->deduct_account_id) === (int) $acc->id ? 'selected' : '' }}>
+                                    {{ $acc->deductOptionLabel() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
+                    <button type="submit" class="loan-show-modal__submit" {{ $accounts->isEmpty() ? 'disabled' : '' }}><i class="fa fa-circle-check"></i> Confirm payment</button>
+                    <p style="margin:10px 0 0;font-size:10px;color:var(--muted);line-height:1.4;">Creates a ledger row for this due date and reduces the selected account balance by the installment amount.</p>
+                </form>
+            </div>
+
+            <div class="js-loan-settle-panel-external" @style(['display' => ($accounts->isEmpty() || $settleIntent === 'external') ? 'block' : 'none'])>
+                <form method="post" action="{{ route('account.loans.installments.mark-external', $loan) }}">
+                    @csrf
+                    <input type="hidden" name="settle_intent" value="external">
+                    <input type="hidden" name="occurrence_date" id="loan-settle-occurrence-external" class="js-loan-settle-occurrence" value="{{ old('occurrence_date') }}">
+                    <button type="submit" class="loan-show-modal__submit" style="background:color-mix(in srgb,#0ea5e9 55%,var(--btn-bg));border-color:color-mix(in srgb,#0ea5e9 40%,var(--border));"><i class="fa fa-check"></i> Mark as already paid</button>
+                    <p style="margin:10px 0 0;font-size:10px;color:var(--muted);line-height:1.4;">Use when this installment was settled outside SociBiz. Does not post to the ledger or change account balances.</p>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -365,9 +415,42 @@ var loanReceiptCtx = {
     }
 
     var settleModal=document.getElementById('loan-settle-modal');
-    var settleOcc=document.getElementById('loan-settle-occurrence');
+    var settleOccInputs=[].slice.call(document.querySelectorAll('.js-loan-settle-occurrence'));
     var settleDue=document.getElementById('loan-settle-due-display');
     var settleAmt=document.getElementById('loan-settle-amount-display');
+    var modeLedger=document.getElementById('loan-settle-mode-ledger');
+    var modeExternal=document.getElementById('loan-settle-mode-external');
+    var panelLedger=settleModal?settleModal.querySelector('.js-loan-settle-panel-ledger'):null;
+    var panelExternal=settleModal?settleModal.querySelector('.js-loan-settle-panel-external'):null;
+
+    function hasAccountsForSettle(){
+        return settleModal&&settleModal.getAttribute('data-has-accounts')==='1';
+    }
+
+    function syncSettleOccurrence(ymd){
+        settleOccInputs.forEach(function(inp){inp.value=ymd||'';});
+    }
+
+    function applyLoanSettleMode(mode){
+        var ha=hasAccountsForSettle();
+        if(mode==='ledger'&&!ha)mode='external';
+        if(modeLedger&&modeExternal){
+            if(mode==='ledger'){modeLedger.checked=true;}else{modeExternal.checked=true;}
+        }
+        if(panelLedger&&panelExternal){
+            if(mode==='ledger'){
+                panelLedger.style.display='block';
+                panelExternal.style.display='none';
+            }else{
+                panelLedger.style.display='none';
+                panelExternal.style.display='block';
+            }
+        }
+    }
+
+    if(modeLedger)modeLedger.addEventListener('change',function(){if(this.checked)applyLoanSettleMode('ledger');});
+    if(modeExternal)modeExternal.addEventListener('change',function(){if(this.checked)applyLoanSettleMode('external');});
+
     if(settleModal){
         settleModal.querySelectorAll('[data-close-loan-settle]').forEach(function(b){
             b.addEventListener('click',function(){closeModal(settleModal);});
@@ -380,12 +463,35 @@ var loanReceiptCtx = {
             var ymd=btn.getAttribute('data-occurrence')||'';
             var human=btn.getAttribute('data-due-human')||'—';
             var amtDisp=btn.getAttribute('data-amount-fmt-display')||btn.getAttribute('data-amount-num')||'—';
-            if(settleOcc)settleOcc.value=ymd;
+            syncSettleOccurrence(ymd);
             if(settleDue)settleDue.textContent=human;
             if(settleAmt)settleAmt.textContent=amtDisp;
+            var haRow=(btn.getAttribute('data-has-accounts')||'')==='1';
+            if(haRow){
+                applyLoanSettleMode('ledger');
+            }else{
+                applyLoanSettleMode('external');
+            }
             openModal(settleModal);
         });
     });
+
+    document.querySelectorAll('.js-loan-payment-open-settle-external').forEach(function(btn){
+        btn.addEventListener('click',function(){
+            var ymd=btn.getAttribute('data-occurrence')||'';
+            var human=btn.getAttribute('data-due-human')||'—';
+            var amtDisp=btn.getAttribute('data-amount-fmt-display')||btn.getAttribute('data-amount-num')||'—';
+            syncSettleOccurrence(ymd);
+            if(settleDue)settleDue.textContent=human;
+            if(settleAmt)settleAmt.textContent=amtDisp;
+            applyLoanSettleMode('external');
+            openModal(settleModal);
+        });
+    });
+
+    if(settleModal&&settleModal.classList.contains('loan-show-modal--open')&&modeLedger&&modeExternal){
+        applyLoanSettleMode(modeLedger.checked?'ledger':'external');
+    }
 
     var receipt=document.getElementById('loan-receipt-modal');
     if(receipt){

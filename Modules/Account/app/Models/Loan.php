@@ -5,6 +5,7 @@ namespace Modules\Account\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Business\Models\Business;
 use Modules\Transaction\Models\LedgerTransaction;
@@ -72,6 +73,16 @@ class Loan extends Model
     {
         return $this->morphMany(LedgerTransaction::class, 'transactionable')
             ->orderByDesc('occurrence_date');
+    }
+
+    /**
+     * Schedule due dates marked as paid outside SociBiz (no ledger row).
+     *
+     * @return HasMany<LoanExternalInstallmentMark, $this>
+     */
+    public function externalInstallmentMarks(): HasMany
+    {
+        return $this->hasMany(LoanExternalInstallmentMark::class);
     }
 
     public static function interestRateTypes(): array

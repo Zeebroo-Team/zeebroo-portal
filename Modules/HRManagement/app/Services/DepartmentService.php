@@ -51,4 +51,14 @@ class DepartmentService
             'co_head_employee_id' => $coHeadEmployeeId,
         ])->save();
     }
+
+    public function updateSalaryRange(Business $business, Department $department, ?float $salaryRangeMin, ?float $salaryRangeMax): void
+    {
+        abort_unless((int) $department->business_id === (int) $business->id, 403);
+
+        $department->fill([
+            'salary_range_min' => $salaryRangeMin,
+            'salary_range_max' => $salaryRangeMax,
+        ])->save();
+    }
 }

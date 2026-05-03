@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('hr-management/departments/growth-overview', [HrDepartmentController::class, 'growthOverview'])->name('hr.departments.growth');
     Route::get('hr-management/departments/{department}', [HrDepartmentController::class, 'show'])->name('hr.departments.show');
     Route::patch('hr-management/departments/{department}', [HrDepartmentController::class, 'update'])->name('hr.departments.update');
+    Route::patch('hr-management/departments/{department}/details', [HrDepartmentController::class, 'updateDetails'])->name('hr.departments.details.update');
     Route::patch('hr-management/departments/{department}/leadership', [HrDepartmentController::class, 'updateLeadership'])->name('hr.departments.leadership');
     Route::get('hr-management/departments/{department}/employees/search', [HrDepartmentController::class, 'searchDepartmentEmployees'])->name('hr.departments.employees.search');
     Route::post('hr-management/departments/{department}/members/attach', [HrDepartmentController::class, 'attachMembers'])->name('hr.departments.members.attach');

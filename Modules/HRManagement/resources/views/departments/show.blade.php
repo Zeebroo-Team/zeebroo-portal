@@ -74,7 +74,7 @@
     <div class="dept-show__head">
         <div>
             <h1 class="dept-show__title">{{ $department->name }}</h1>
-            <p class="dept-show__muted">{{ __(':business · Headcount overview and assigning people to this team.', ['business' => $business->name]) }}</p>
+            <p class="dept-show__muted">{{ __(':business · Headcount overview, optional salary band, and assigning people to this team.', ['business' => $business->name]) }}</p>
             @if($department->headEmployee || $department->coHeadEmployee)
                 <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--muted);">
                     @if($department->headEmployee)
@@ -120,6 +120,80 @@
                 <dd>{{ $members->pluck('job_title_id')->filter()->unique()->count() }}</dd>
             </dl>
         </div>
+
+        <h2 class="dept-sub">{{ __('Department details') }}</h2>
+        @php($deptSalaryCur = $departmentSalaryCurrency ?? '')
+        @php($deptSalMin = $department->salary_range_min)
+        @php($deptSalMax = $department->salary_range_max)
+        @php($deptSalSet = $deptSalMin !== null || $deptSalMax !== null)
+        <div class="dept-stat-grid" role="region" aria-labelledby="dept-detail-salary-dt">
+            <dl class="dept-stat">
+                <dt id="dept-detail-salary-dt">{{ __('Salary range (guide)') }}</dt>
+                <dd style="font-size:15px;font-weight:700;line-height:1.35;font-variant-numeric:tabular-nums;">
+                    @if(!$deptSalSet)
+                        <span class="muted" style="font-size:13px;font-weight:600;">{{ __('Not set') }}</span>
+                    @elseif($deptSalMin !== null && $deptSalMax !== null)
+                        @if($deptSalaryCur !== '')
+                            <span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $deptSalaryCur }}</span>
+                        @endif
+                        {{ number_format((float) $deptSalMin, 0) }} … {{ number_format((float) $deptSalMax, 0) }}
+                    @elseif($deptSalMin !== null)
+                        @if($deptSalaryCur !== '')
+                            <span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $deptSalaryCur }}</span>
+                        @endif
+                        {{ __('From :amount', ['amount' => number_format((float) $deptSalMin, 0)]) }}
+                    @else
+                        @if($deptSalaryCur !== '')
+                            <span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $deptSalaryCur }}</span>
+                        @endif
+                        {{ __('Up to :amount', ['amount' => number_format((float) $deptSalMax, 0)]) }}
+                    @endif
+                </dd>
+            </dl>
+        </div>
+        <p class="muted" style="margin:-6px 0 0;font-size:12px;line-height:1.5;">{{ __('This salary band is optional and indicative—not tied to payroll.') }}
+            <a href="{{ route('hr.departments.show', ['department' => $department, 'tab' => 'management']) }}" style="color:var(--primary);font-weight:600;text-decoration:none;">{{ __('Department management') }}</a>
+        </p>
+
+        @php($ccRep = $costCenterReport ?? [])
+        @php($ccCurShow = (string) ($departmentSalaryCurrency ?? ''))
+        <h2 class="dept-sub">{{ __('Cost center (bills)') }}</h2>
+        @if(! ($ccRep['available'] ?? false))
+            <p class="muted" style="margin:0 0 14px;line-height:1.5;font-size:13px;">{{ __('Bill amounts by department are unavailable until bills support department assignment.') }}</p>
+        @elseif(($ccRep['department_count'] ?? 0) === 0)
+            <p class="muted" style="margin:0 0 14px;line-height:1.5;font-size:13px;">{{ __('Add departments to split unassigned bill amounts across teams.') }}</p>
+        @elseif($departmentCostCenterRow ?? null)
+            @php($dcc = $departmentCostCenterRow)
+            <p class="muted" style="margin:0 0 10px;line-height:1.45;font-size:12px;max-width:72ch;">{{ __('Assigned bills total for this department, plus an equal share of bills with no department (:n teams).', ['n' => $ccRep['department_count']]) }}</p>
+            <div class="dept-stat-grid" role="region" aria-labelledby="dept-cc-heading">
+                <h3 id="dept-cc-heading" class="sr-only">{{ __('Cost center') }}</h3>
+                <dl class="dept-stat">
+                    <dt>{{ __('Assigned bills') }}</dt>
+                    <dd style="font-size:18px;font-weight:820;font-variant-numeric:tabular-nums;">
+                        @if($ccCurShow !== '')<span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $ccCurShow }}</span> @endif{{ number_format((float) $dcc['assigned_total'], 2, '.', ',') }}
+                    </dd>
+                </dl>
+                <dl class="dept-stat">
+                    <dt>{{ __('Unallocated share') }}</dt>
+                    <dd style="font-size:18px;font-weight:820;font-variant-numeric:tabular-nums;">
+                        @if($ccCurShow !== '')<span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $ccCurShow }}</span> @endif{{ number_format((float) $dcc['unallocated_share'], 2, '.', ',') }}
+                    </dd>
+                </dl>
+                <dl class="dept-stat">
+                    <dt>{{ __('Cost center total') }}</dt>
+                    <dd style="font-size:20px;font-weight:820;font-variant-numeric:tabular-nums;">
+                        @if($ccCurShow !== '')<span style="opacity:.72;font-size:11px;text-transform:uppercase;">{{ $ccCurShow }}</span> @endif{{ number_format((float) $dcc['cost_center_total'], 2, '.', ',') }}
+                    </dd>
+                </dl>
+            </div>
+            <p class="muted" style="margin:10px 0 0;font-size:12px;line-height:1.45;">
+                {{ __('Unassigned bills (business total, divided evenly across departments):') }}
+                <strong style="color:var(--text);font-variant-numeric:tabular-nums;">@if($ccCurShow !== '')<span style="opacity:.82;text-transform:uppercase;font-size:10px;">{{ $ccCurShow }}</span> @endif{{ number_format((float) ($ccRep['unassigned_bills_total'] ?? 0), 2, '.', ',') }}</strong>.
+                <a href="{{ route('account.bills.index') }}" style="color:var(--primary);font-weight:600;text-decoration:none;">{{ __('Open Bills') }}</a>
+            </p>
+        @else
+            <p class="muted" style="margin:0;line-height:1.5;font-size:13px;">{{ __('Could not compute cost center for this department.') }}</p>
+        @endif
 
         <h2 class="dept-sub">{{ __('Employment breakdown') }}</h2>
         <div class="dept-stat-grid dept-stat-grid--employment" role="group" aria-label="{{ __('Employment breakdown') }}">
@@ -258,6 +332,37 @@
                 </div>
                 <div style="margin-top:14px;display:flex;justify-content:flex-end;">
                     <button type="submit" class="linkbtn" style="padding:8px 16px;font-size:13px;">{{ __('Save name') }}</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="dept-mgmt-card">
+            <h2 style="margin:0 0 6px;font-size:15px;font-weight:800;">{{ __('Optional salary range') }}</h2>
+            <p class="dept-lead-hint">{{ __('Used as an internal guideline for hiring or budgets (not payroll calculation). Uses your business currency from settings when displayed.') }}</p>
+            @if($errors->has('salary_range_min'))
+                <p class="cat-banner cat-banner--err" role="alert" style="margin-bottom:12px;">{{ $errors->first('salary_range_min') }}</p>
+            @endif
+            @if($errors->has('salary_range_max'))
+                <p class="cat-banner cat-banner--err" role="alert" style="margin-bottom:12px;">{{ $errors->first('salary_range_max') }}</p>
+            @endif
+            <form method="post" action="{{ route('hr.departments.details.update', $department) }}">
+                @csrf
+                @method('PATCH')
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 14px;">
+                    <div class="dept-field" style="margin:0;">
+                        <label for="dept-sal-min">{{ __('Minimum') }}</label>
+                        <input type="number" name="salary_range_min" id="dept-sal-min" value="{{ old('salary_range_min', $department->salary_range_min) }}" step="1" min="0" autocomplete="off" placeholder="{{ __('e.g. 40000') }}">
+                    </div>
+                    <div class="dept-field" style="margin:0;">
+                        <label for="dept-sal-max">{{ __('Maximum') }}</label>
+                        <input type="number" name="salary_range_max" id="dept-sal-max" value="{{ old('salary_range_max', $department->salary_range_max) }}" step="1" min="0" autocomplete="off" placeholder="{{ __('e.g. 65000') }}">
+                    </div>
+                </div>
+                @if(($departmentSalaryCurrency ?? '') !== '')
+                    <p class="muted" style="margin:10px 0 0;font-size:12px;">{{ __('Display currency') }}: <strong style="color:var(--text);">{{ $departmentSalaryCurrency }}</strong></p>
+                @endif
+                <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                    <button type="submit" class="linkbtn" style="padding:8px 16px;font-size:13px;">{{ __('Save salary range') }}</button>
                 </div>
             </form>
         </div>

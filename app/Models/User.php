@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Modules\Account\Models\Account;
+use Modules\AppConnection\Models\UserAppConnection;
 use Modules\Business\Models\Business;
 use Modules\Settings\Concerns\HasSettings;
 use Spatie\Permission\Traits\HasRoles;
@@ -20,7 +21,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasSettings;
+    use HasFactory, HasRoles, HasSettings, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -43,5 +44,15 @@ class User extends Authenticatable
     public function accounts(): HasMany
     {
         return $this->hasMany(Account::class);
+    }
+
+    /**
+     * Third-party app connections (OAuth) for this user.
+     *
+     * @return HasMany<UserAppConnection, $this>
+     */
+    public function appConnections(): HasMany
+    {
+        return $this->hasMany(UserAppConnection::class);
     }
 }

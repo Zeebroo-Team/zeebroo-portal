@@ -21,7 +21,8 @@ class AIBotChatController extends Controller
         }
 
         $business = Business::currentForNavbar($request->user());
-        $result = $chatService->reply($request->user(), $business, $request->conversationMessages());
+        $speakReply = $request->wantsSpokenReply();
+        $result = $chatService->reply($request->user(), $business, $request->conversationMessages(), $speakReply);
 
         if (($result['error'] ?? null) !== null && trim((string) $result['error']) !== '') {
             return response()->json([
@@ -30,8 +31,17 @@ class AIBotChatController extends Controller
             ], 422);
         }
 
-        return response()->json([
+        $payload = [
             'reply' => $result['reply'] ?? '',
-        ]);
+        ];
+
+        if (isset($result['reply_audio']) && is_array($result['reply_audio'])) {
+            $payload['reply_audio'] = [
+                'mime' => $result['reply_audio']['mime'] ?? 'audio/wav',
+                'data' => $result['reply_audio']['data'] ?? '',
+            ];
+        }
+
+        return response()->json($payload);
     }
 }

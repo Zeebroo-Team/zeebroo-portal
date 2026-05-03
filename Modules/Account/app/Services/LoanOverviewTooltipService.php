@@ -258,9 +258,9 @@ class LoanOverviewTooltipService
     }
 
     /**
-     * One row per scheduled installment: expected amount, whether a ledger entry exists for that due date, and past-due-unpaid flag.
+     * One row per scheduled installment: expected amount, ledger / external-paid status, and past-due-unpaid flag.
      *
-     * @return Collection<int, array{period: int, due: Carbon, due_ymd: string, amount: float, amount_formatted: string, paid: bool, past_due_unpaid: bool, status_label: string, ledger: ?LedgerTransaction}>
+     * @return Collection<int, array{period: int, due: Carbon, due_ymd: string, amount: float, amount_formatted: string, paid: bool, paid_via_ledger: bool, paid_outside_ledger_only: bool, past_due_unpaid: bool, status_label: string, ledger: ?LedgerTransaction}>
      */
     public function installmentScheduleWithPaymentStatus(Loan $loan, ?Carbon $asOf = null): Collection
     {
@@ -269,6 +269,9 @@ class LoanOverviewTooltipService
 
         if (! $loan->relationLoaded('ledgerTransactions')) {
             $loan->load(['ledgerTransactions.deductAccount.bank', 'ledgerTransactions.deductAccount.bankType']);
+        }
+        if (! $loan->relationLoaded('externalInstallmentMarks')) {
+            $loan->load('externalInstallmentMarks');
         }
 
         $summary = $this->summarizeLoan($loan);
@@ -281,11 +284,15 @@ class LoanOverviewTooltipService
         foreach ($schedule as $due) {
             $period++;
             $d = $due->copy()->startOfDay();
-            $paid = $this->loanHasLedgerOnDate($loan, $d);
+            $paidViaLedger = $this->loanHasLedgerOnDate($loan, $d);
+            $paidOutsideLedgerOnly = ! $paidViaLedger && $this->loanHasExternalPaidMarkOnDate($loan, $d);
+            $paid = $paidViaLedger || $paidOutsideLedgerOnly;
             $pastDueUnpaid = $d->lt($today) && ! $paid;
 
-            if ($paid) {
+            if ($paidViaLedger) {
                 $statusLabel = 'Paid';
+            } elseif ($paidOutsideLedgerOnly) {
+                $statusLabel = 'Already paid (outside ledger)';
             } elseif ($pastDueUnpaid) {
                 $statusLabel = 'Past due · unpaid';
             } else {
@@ -293,7 +300,7 @@ class LoanOverviewTooltipService
             }
 
             $ledgerTx = null;
-            if ($paid) {
+            if ($paidViaLedger) {
                 foreach ($loan->ledgerTransactions as $ledgerRow) {
                     if ($ledgerRow->occurrence_date === null) {
                         continue;
@@ -312,6 +319,8 @@ class LoanOverviewTooltipService
                 'amount' => $amount,
                 'amount_formatted' => $amountFormatted,
                 'paid' => $paid,
+                'paid_via_ledger' => $paidViaLedger,
+                'paid_outside_ledger_only' => $paidOutsideLedgerOnly,
                 'past_due_unpaid' => $pastDueUnpaid,
                 'status_label' => $statusLabel,
                 'ledger' => $ledgerTx,
@@ -342,13 +351,16 @@ class LoanOverviewTooltipService
         if (! $loan->relationLoaded('ledgerTransactions')) {
             $loan->load('ledgerTransactions');
         }
+        if (! $loan->relationLoaded('externalInstallmentMarks')) {
+            $loan->load('externalInstallmentMarks');
+        }
 
         foreach ($schedule as $due) {
             $d = $due->copy()->startOfDay();
             if ($d->gte($today)) {
                 break;
             }
-            if (! $this->loanHasLedgerOnDate($loan, $d)) {
+            if (! $this->loanInstallmentSatisfied($loan, $d)) {
                 return true;
             }
         }
@@ -356,12 +368,27 @@ class LoanOverviewTooltipService
         return false;
     }
 
-    /** True if any loan under the business has a past-due installment with no matching ledger row. */
+    /**
+     * True when a ledger row exists for the due date, or the installment was marked paid outside SociBiz.
+     */
+    public function loanInstallmentSatisfied(Loan $loan, Carbon $day): bool
+    {
+        if (! $loan->relationLoaded('ledgerTransactions')) {
+            $loan->load('ledgerTransactions');
+        }
+        if (! $loan->relationLoaded('externalInstallmentMarks')) {
+            $loan->load('externalInstallmentMarks');
+        }
+
+        return $this->loanHasLedgerOnDate($loan, $day) || $this->loanHasExternalPaidMarkOnDate($loan, $day);
+    }
+
+    /** True if any loan under the business has a past-due installment that is not satisfied (ledger or external mark). */
     public function businessHasOverdueLoanInstallments(Business $business): bool
     {
         $loans = Loan::query()
             ->where('business_id', $business->id)
-            ->with('ledgerTransactions')
+            ->with(['ledgerTransactions', 'externalInstallmentMarks'])
             ->get();
 
         foreach ($loans as $loan) {
@@ -383,6 +410,23 @@ class LoanOverviewTooltipService
             }
 
             if (Carbon::parse($row->occurrence_date)->toDateString() === $needle) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function loanHasExternalPaidMarkOnDate(Loan $loan, Carbon $day): bool
+    {
+        $needle = $day->toDateString();
+
+        foreach ($loan->externalInstallmentMarks as $mark) {
+            if ($mark->due_date === null) {
+                continue;
+            }
+
+            if (Carbon::parse($mark->due_date)->toDateString() === $needle) {
                 return true;
             }
         }

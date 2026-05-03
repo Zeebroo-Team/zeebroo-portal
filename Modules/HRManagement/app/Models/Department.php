@@ -14,9 +14,19 @@ class Department extends Model
 
     protected $fillable = [
         'name',
+        'salary_range_min',
+        'salary_range_max',
         'head_employee_id',
         'co_head_employee_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'salary_range_min' => 'decimal:2',
+            'salary_range_max' => 'decimal:2',
+        ];
+    }
 
     public function business(): BelongsTo
     {

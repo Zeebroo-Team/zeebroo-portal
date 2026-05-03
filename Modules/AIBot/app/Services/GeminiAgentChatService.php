@@ -26,13 +26,14 @@ TXT;
     public function __construct(
         private GeminiGenerateContentClient $client,
         private SociBizAgentToolExecutor $executor,
+        private GeminiTextToSpeechService $textToSpeech,
     ) {}
 
     /**
-     * @param  array<int, array{role: string, content: string}>  $messages
-     * @return array{reply: string, error?: string}
+     * @param  array<int, array{role: string, content: string, audio?: array{base64: string, mime_type: string}}>  $messages
+     * @return array{reply: string, error?: string, reply_audio?: array{mime: string, data: string}}
      */
-    public function reply(User $user, ?Business $business, array $messages): array
+    public function reply(User $user, ?Business $business, array $messages, bool $speakReply = false): array
     {
         $contents = $this->toGeminiContents($messages);
         if ($contents === []) {
@@ -98,7 +99,7 @@ TXT;
                     return ['reply' => '', 'error' => 'The model returned an empty reply.'];
                 }
 
-                return ['reply' => $reply];
+                return $this->withOptionalSpeech($reply, $speakReply);
             }
 
             $contents[] = $this->normalizeModelTurnForGeminiApi($modelContent);
@@ -135,15 +136,34 @@ TXT;
 
         $recovered = $this->recoverTextOnlyAnswer($contents);
         if ($recovered !== null && $recovered !== '') {
-            return ['reply' => $recovered];
+            return $this->withOptionalSpeech($recovered, $speakReply);
         }
 
         $direct = $this->tryDirectDepartmentCountAnswer($user, $business, $messages);
         if ($direct !== null && $direct !== '') {
-            return ['reply' => $direct];
+            return $this->withOptionalSpeech($direct, $speakReply);
         }
 
         return ['reply' => '', 'error' => 'The assistant hit the tool-use limit before producing a final answer. Try again, or pick your business in the header first.'];
+    }
+
+    /**
+     * @return array{reply: string, reply_audio?: array{mime: string, data: string}}
+     */
+    private function withOptionalSpeech(string $reply, bool $speakReply): array
+    {
+        $reply = trim($reply);
+        $out = ['reply' => $reply];
+        if (! $speakReply || $reply === '') {
+            return $out;
+        }
+
+        $audio = $this->textToSpeech->synthesizeReply($reply);
+        if ($audio !== null) {
+            $out['reply_audio'] = $audio;
+        }
+
+        return $out;
     }
 
     /**
@@ -259,8 +279,10 @@ TXT;
         return implode('', $chunks);
     }
 
-    /** @param  array<int, array{role: string, content: string}>  $messages */
-    /** @return list<array{role: string, parts: list<array<string, mixed>>}> */
+    /**
+     * @param  array<int, array{role: string, content: string, audio?: array{base64: string, mime_type: string}}>  $messages
+     * @return list<array{role: string, parts: list<array<string, mixed>>}>
+     */
     private function toGeminiContents(array $messages): array
     {
         $contents = [];
@@ -268,14 +290,35 @@ TXT;
         foreach ($messages as $m) {
             $role = strtolower((string) ($m['role'] ?? '')) === 'assistant' ? 'model' : 'user';
             $text = trim((string) ($m['content'] ?? ''));
-            if ($text === '') {
+            $audio = isset($m['audio']) && is_array($m['audio']) ? $m['audio'] : null;
+            $audioB64Raw = isset($audio['base64']) && is_string($audio['base64']) ? $audio['base64'] : '';
+            $audioB64 = $audioB64Raw !== '' ? preg_replace('/\s+/', '', $audioB64Raw) : '';
+            $mime = isset($audio['mime_type']) && is_string($audio['mime_type']) ? trim($audio['mime_type']) : 'audio/webm';
+
+            $parts = [];
+            if ($text !== '') {
+                $parts[] = ['text' => $text];
+            }
+
+            if ($audioB64 !== '') {
+                if ($parts === []) {
+                    $parts[] = ['text' => 'Voice input about the SociBiz workspace — use tools when you need factual data, then reply in plain text.'];
+                }
+                $parts[] = [
+                    'inlineData' => [
+                        'mimeType' => $mime !== '' ? $mime : 'audio/webm',
+                        'data' => $audioB64,
+                    ],
+                ];
+            }
+
+            if ($parts === []) {
                 continue;
             }
+
             $contents[] = [
                 'role' => $role,
-                'parts' => [
-                    ['text' => $text],
-                ],
+                'parts' => $parts,
             ];
         }
 
