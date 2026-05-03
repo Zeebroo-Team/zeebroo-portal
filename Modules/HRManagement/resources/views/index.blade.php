@@ -28,6 +28,11 @@
                 <strong style="font-size:14px;display:flex;align-items:center;gap:8px;"><i class="fa fa-folder-tree"></i> Departments</strong>
                 <span class="muted" style="margin-top:6px;display:block;font-size:12px;line-height:1.4;">Teams and divisions—used on employee profiles.</span>
             </a>
+            <a href="{{ route('hr.departments.growth') }}" style="border:1px solid var(--border);border-radius:14px;padding:18px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;background:color-mix(in srgb,var(--card) 92%,transparent);"
+               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <strong style="font-size:14px;display:flex;align-items:center;gap:8px;"><i class="fa fa-chart-line"></i> Department growth</strong>
+                <span class="muted" style="margin-top:6px;display:block;font-size:12px;line-height:1.4;">Line chart of monthly headcount by team.</span>
+            </a>
             <a href="{{ route('hr.job-titles.index') }}" style="border:1px solid var(--border);border-radius:14px;padding:18px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;background:color-mix(in srgb,var(--card) 92%,transparent);"
                onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
                 <strong style="font-size:14px;display:flex;align-items:center;gap:8px;"><i class="fa fa-id-badge"></i> Designations</strong>

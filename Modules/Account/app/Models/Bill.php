@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Business\Models\Branch;
 use Modules\Business\Models\Business;
+use Modules\HRManagement\Models\Department;
 use Modules\Transaction\Models\LedgerTransaction;
 
 class Bill extends Model
@@ -42,6 +43,7 @@ class Bill extends Model
         'rental_property_related',
         'rental_id',
         'branch_id',
+        'department_id',
         'name',
         'payment_mode',
         'bill_category',
@@ -91,6 +93,11 @@ class Bill extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
     }
 
     public function deductAccount(): BelongsTo

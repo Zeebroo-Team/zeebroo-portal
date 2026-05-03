@@ -1,7 +1,10 @@
 @extends('theme::layouts.app', ['title' => 'AI Agent · '.$businessLabel, 'heading' => 'AI Agent', 'chatWorkspace' => true])
 
 @section('content')
-<div class="aibot-root" data-business-name="{{ e($businessLabel) }}">
+<div class="aibot-root"
+     data-business-name="{{ e($businessLabel) }}"
+     data-chat-url="{{ route('aibot.chat') }}"
+     data-csrf="{{ csrf_token() }}">
     <div class="aibot-main">
         <div class="aibot-thread" id="aibot-thread" tabindex="0" aria-live="polite">
             <div class="aibot-welcome" id="aibot-welcome">
@@ -9,7 +12,7 @@
                     <i class="fa fa-sparkles"></i>
                 </div>
                 <h1 class="aibot-welcome-title">How can I help today?</h1>
-                <p class="aibot-welcome-sub muted">Ask about ledgers, HR, rentals, or daily operations. Context: <strong>{{ $businessLabel }}</strong>@if(!$business)<span> — choose a business in the header when you’re ready for company-specific answers.</span>@endif Responses are placeholders until your model is connected.</p>
+                <p class="aibot-welcome-sub muted">Ask about balances, bills, rentals, loans, ledger activity, or HR. Context: <strong>{{ $businessLabel }}</strong>@if(!$business)<span> — choose a business in the header for company-specific answers.</span>@endif Answers use Google Gemini with read-only workspace tools (no payments or edits from chat).</p>
                 <div class="aibot-suggestions">
                     <button type="button" class="aibot-chip" data-prompt="Summarize cash position for my business">Summarize cash position</button>
                     <button type="button" class="aibot-chip" data-prompt="What HR records should I maintain?">HR compliance tips</button>
@@ -47,7 +50,16 @@
 </div>
 
 <style>
-    .aibot-root{display:flex;flex:1;min-height:0;min-height:calc(100vh - 140px);}
+    /* Fill space below navbar; prevents page scroll hiding the composer (thread scrolls only). */
+    .aibot-root{
+        align-self:stretch;
+        width:100%;
+        flex:1 1 0;
+        display:flex;
+        min-height:0;
+        max-height:100%;
+        overflow:hidden;
+    }
     .aibot-panel-nav{
         width:260px;
         flex-shrink:0;
@@ -97,8 +109,17 @@
     .aibot-history-item i{font-size:12px;color:var(--muted);width:1em;text-align:center;}
     .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .aibot-panel-foot{margin-top:auto;padding-top:8px;}
-    .aibot-main{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;}
-    .aibot-thread{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 24px 16px;display:flex;flex-direction:column;}
+    .aibot-main{display:flex;flex-direction:column;flex:1 1 0;min-width:0;min-height:0;max-height:100%;overflow:hidden;}
+    .aibot-thread{
+        flex:1 1 0;
+        min-height:0;
+        overflow-y:auto;
+        overflow-x:hidden;
+        -webkit-overflow-scrolling:touch;
+        padding:28px 24px 24px;
+        display:flex;
+        flex-direction:column;
+    }
     .aibot-welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 12px 48px;max-width:520px;margin:0 auto;width:100%;}
     .aibot-welcome-icon{
         width:52px;height:52px;border-radius:16px;
@@ -130,7 +151,15 @@
     .aibot-msg-ai{
         border-bottom-left-radius:6px;background:color-mix(in srgb,var(--card) 96%,#000);border:1px solid var(--border);color:var(--text);margin-left:0;
     }
-    .aibot-composer-wrap{flex-shrink:0;padding:14px 20px 20px;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--bg) 70%,transparent) 35%);}
+    .aibot-composer-wrap{
+        flex-shrink:0;
+        position:relative;
+        z-index:2;
+        padding:12px 20px max(14px,env(safe-area-inset-bottom,0px));
+        border-top:1px solid var(--border);
+        background:color-mix(in srgb,var(--card) 96%,transparent);
+        box-shadow:0 -12px 32px rgba(0,0,0,.08);
+    }
     .aibot-composer{display:flex;align-items:flex-end;gap:10px;max-width:780px;margin:0 auto;background:color-mix(in srgb,var(--card) 95%,transparent);border:1px solid var(--border);border-radius:18px;padding:10px 10px 10px 16px;}
     .aibot-input{
         flex:1;
@@ -145,6 +174,7 @@
     .aibot-send:hover{background:var(--btn-hover);color:#111827;}
     .aibot-send:active{transform:scale(.96);}
     .aibot-disclaimer{text-align:center;font-size:11px;margin:8px 0 0;}
+    .aibot-form--busy{opacity:.88;pointer-events:none;}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     .aibot-typing{display:inline-flex;gap:4px;align-items:center;padding:4px 0;}
     .aibot-typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:aibot-dot 1.2s ease-in-out infinite;}
@@ -152,7 +182,7 @@
     .aibot-typing span:nth-child(3){animation-delay:.4s;}
     @keyframes aibot-dot{0%,80%,100%{opacity:.35;transform:scale(.88);}40%{opacity:1;transform:scale(1);}}
     @media (max-width:900px){
-        .aibot-root{flex-direction:column;min-height:min(70vh,560px);}
+        .aibot-root{flex-direction:column;}
         .aibot-panel-nav{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;border-left:0;border-top:1px solid var(--border);}
         .aibot-new-chat{width:auto;flex:1;min-width:140px;}
         .aibot-history-label{display:none;}
@@ -166,13 +196,16 @@
 (function () {
     const root = document.querySelector('.aibot-root');
     if (!root) return;
-    const businessName = root.dataset.businessName || 'your business';
+    const chatUrl = root.dataset.chatUrl || '';
+    const csrfToken = root.dataset.csrf || '';
     const welcome = document.getElementById('aibot-welcome');
     const messagesEl = document.getElementById('aibot-messages');
     const thread = document.getElementById('aibot-thread');
     const form = document.getElementById('aibot-form');
     const input = document.getElementById('aibot-input');
     const newChatBtn = document.getElementById('aibot-new-chat');
+    let conversation = [];
+    let busy = false;
 
     function escapeHtml(text) {
         const d = document.createElement('div');
@@ -190,6 +223,7 @@
         welcome.hidden = false;
         messagesEl.hidden = true;
         messagesEl.innerHTML = '';
+        conversation = [];
         thread.scrollTop = 0;
         input.focus();
     }
@@ -203,6 +237,7 @@
         messagesEl.appendChild(row);
         hideWelcomeIfNeeded();
         thread.scrollTop = thread.scrollHeight;
+        return row;
     }
 
     function appendTypingRow() {
@@ -224,34 +259,94 @@
         thread.scrollTop = thread.scrollHeight;
     }
 
-    function fakeAssistantReply(prompt) {
-        return (
-            'Here is a scaffold reply for «' +
-            prompt.slice(0, 120) +
-            (prompt.length > 120 ? '…' : '') +
-            '».\n\n' +
-            'Connect your LLM or rules engine on the server to replace this bubble. Workspace context is available as ' +
-            businessName +
-            '.'
-        );
-    }
-
     function resizeInput() {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 180) + 'px';
     }
 
+    function refreshEmptyThreadState() {
+        if (!messagesEl.children.length) {
+            welcome.hidden = false;
+            messagesEl.hidden = true;
+        }
+    }
+
     async function submitPrompt(text) {
         const trimmed = text.trim();
-        if (!trimmed) return;
-        appendUserBubble(trimmed);
+        if (!trimmed || busy || !chatUrl) return;
+
+        busy = true;
+        form.classList.add('aibot-form--busy');
+        conversation.push({ role: 'user', content: trimmed });
+        const userRow = appendUserBubble(trimmed);
         input.value = '';
         resizeInput();
         const typingRow = appendTypingRow();
-        await new Promise(function (resolve) {
-            window.setTimeout(resolve, 500 + Math.random() * 500);
-        });
-        replaceTypingWithAi(fakeAssistantReply(trimmed), typingRow);
+
+        try {
+            const res = await fetch(chatUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ messages: conversation }),
+            });
+            const data = await res.json().catch(function () {
+                return {};
+            });
+
+            if (!res.ok) {
+                const flattened =
+                    data && data.errors && typeof data.errors === 'object'
+                        ? Object.values(data.errors).flat().find(Boolean)
+                        : null;
+                const msg =
+                    (data && data.message) ||
+                    (data && data.error) ||
+                    flattened ||
+                    (res.status === 429 ? 'Too many requests. Wait a moment and try again.' : 'Request failed (' + res.status + ').');
+                conversation.pop();
+                typingRow.remove();
+                userRow.remove();
+                refreshEmptyThreadState();
+                appendUserBubble(trimmed);
+                const errTyping = appendTypingRow();
+                replaceTypingWithAi(msg, errTyping);
+                conversation.push({ role: 'user', content: trimmed });
+
+                return;
+            }
+
+            const reply = (typeof data.reply === 'string' ? data.reply : '').trim();
+            if (!reply) {
+                const msg =
+                    (data && data.message) ||
+                    (data && data.error) ||
+                    'No reply from the agent.';
+                replaceTypingWithAi(msg, typingRow);
+                return;
+            }
+
+            conversation.push({ role: 'assistant', content: reply });
+            replaceTypingWithAi(reply, typingRow);
+        } catch (err) {
+            conversation.pop();
+            typingRow.remove();
+            userRow.remove();
+            refreshEmptyThreadState();
+            appendUserBubble(trimmed);
+            const errTyping = appendTypingRow();
+            replaceTypingWithAi('Network error: ' + (err && err.message ? err.message : 'unknown'), errTyping);
+            conversation.push({ role: 'user', content: trimmed });
+        } finally {
+            busy = false;
+            form.classList.remove('aibot-form--busy');
+            input.focus();
+        }
     }
 
     input.addEventListener('input', resizeInput);

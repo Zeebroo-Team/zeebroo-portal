@@ -174,7 +174,7 @@
         .switch input:checked + .slider:before{transform:translateX(20px)}
         .content-inner{padding:28px}
         /* Full-viewport workspace (e.g. AI chat) inside main chrome */
-        .content--chat-workspace{display:flex;flex-direction:column;min-height:100vh}
+        .content.content--chat-workspace{display:flex;flex-direction:column;box-sizing:border-box;height:100vh;height:100dvh;overflow:hidden}
         .content-inner--chat-workspace{flex:1;display:flex;flex-direction:column;min-height:0;padding:0!important}
         .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:920px}
         .muted{color:var(--muted)}

@@ -17,6 +17,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('hr-management/payroll', [HrPayrollController::class, 'index'])->name('hr.payroll.index');
     Route::get('hr-management/departments', [HrDepartmentController::class, 'index'])->name('hr.departments.index');
     Route::post('hr-management/departments', [HrDepartmentController::class, 'store'])->name('hr.departments.store');
+    Route::get('hr-management/departments/growth-overview', [HrDepartmentController::class, 'growthOverview'])->name('hr.departments.growth');
+    Route::get('hr-management/departments/{department}', [HrDepartmentController::class, 'show'])->name('hr.departments.show');
+    Route::patch('hr-management/departments/{department}', [HrDepartmentController::class, 'update'])->name('hr.departments.update');
+    Route::patch('hr-management/departments/{department}/leadership', [HrDepartmentController::class, 'updateLeadership'])->name('hr.departments.leadership');
+    Route::get('hr-management/departments/{department}/employees/search', [HrDepartmentController::class, 'searchDepartmentEmployees'])->name('hr.departments.employees.search');
+    Route::post('hr-management/departments/{department}/members/attach', [HrDepartmentController::class, 'attachMembers'])->name('hr.departments.members.attach');
     Route::delete('hr-management/departments/{department}', [HrDepartmentController::class, 'destroy'])->name('hr.departments.destroy');
     Route::get('hr-management/designations', [HrJobTitleController::class, 'index'])->name('hr.job-titles.index');
     Route::post('hr-management/designations', [HrJobTitleController::class, 'store'])->name('hr.job-titles.store');

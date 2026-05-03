@@ -495,6 +495,9 @@
                 @if($bill->warehouse)
                     <span class="bill-show__pill"><i class="fa fa-code-branch" aria-hidden="true"></i>{{ $bill->warehouse->name }}</span>
                 @endif
+                @if($bill->department)
+                    <span class="bill-show__pill"><i class="fa fa-users" aria-hidden="true"></i>{{ \Illuminate\Support\Str::limit($bill->department->name, 42) }}</span>
+                @endif
                 @if($bill->rental_property_related && $bill->rental)
                     <a href="{{ route('account.rentals.show', $bill->rental) }}" class="bill-show__pill" style="text-decoration:none;color:inherit;"><i class="fa fa-building" aria-hidden="true"></i>{{ \Illuminate\Support\Str::limit($bill->rental->property_type, 42) }}</a>
                 @elseif($bill->rental_property_related)

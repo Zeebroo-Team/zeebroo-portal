@@ -1,5 +1,6 @@
 @php
     $editing = $editingBill ?? null;
+    $departmentsForBill = $departmentsForBill ?? collect();
     $rentalsForBillLink = $rentalsForBillLink ?? collect();
     $rpRelatedShow = (bool) old('rental_property_related', $editing?->rental_property_related ?? false);
     $pmOld = old('payment_mode', $editing?->payment_mode ?? \Modules\Account\Models\Bill::PAYMENT_MODE_RECURRING);
@@ -86,6 +87,25 @@
             </div>
         </div>
     </div>
+
+    @if($business && $departmentsForBill->isNotEmpty())
+        <div class="rental-form-section">
+            <div class="rental-form-section__head"><i class="fa fa-users" aria-hidden="true"></i> Department</div>
+            <p class="bill-rental-field__lead">Optional — tag this bill for a specific HR department when you organize teams under <strong>HR Management</strong>.</p>
+            <div class="rental-fields-grid">
+                <div class="rental-field rental-field--full">
+                    <label for="bill-department-id">Assign to department</label>
+                    <select id="bill-department-id" name="department_id" class="rental-select">
+                        <option value="">No department</option>
+                        @foreach($departmentsForBill as $dept)
+                            <option value="{{ $dept->id }}" @selected((string) old('department_id', $editing?->department_id) === (string) $dept->id)>{{ $dept->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('department_id')<span class="rental-field-err">{{ $message }}</span>@enderror
+                </div>
+            </div>
+        </div>
+    @endif
 
     @if($business)
         <div class="rental-form-section bill-location-rental-group">

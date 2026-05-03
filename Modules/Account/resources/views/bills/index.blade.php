@@ -179,6 +179,9 @@
                             if ($bill->rental_property_related && $bill->rental) {
                                 $listMetaParts[] = 'Rental: '.\Illuminate\Support\Str::limit((string) $bill->rental->property_type, 22);
                             }
+                            if ($bill->department) {
+                                $listMetaParts[] = 'Dept: '.\Illuminate\Support\Str::limit((string) $bill->department->name, 26);
+                            }
                             if ($bill->description) {
                                 $listMetaParts[] = \Illuminate\Support\Str::limit((string) $bill->description, 40);
                             }

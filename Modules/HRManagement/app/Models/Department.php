@@ -5,6 +5,7 @@ namespace Modules\HRManagement\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Account\Models\Bill;
 use Modules\Business\Models\Business;
 
 class Department extends Model
@@ -13,6 +14,8 @@ class Department extends Model
 
     protected $fillable = [
         'name',
+        'head_employee_id',
+        'co_head_employee_id',
     ];
 
     public function business(): BelongsTo
@@ -23,5 +26,20 @@ class Department extends Model
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class, 'department_id');
+    }
+
+    public function headEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'head_employee_id');
+    }
+
+    public function coHeadEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'co_head_employee_id');
+    }
+
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class, 'department_id');
     }
 }

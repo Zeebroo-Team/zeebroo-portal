@@ -58,9 +58,14 @@ html.cat-modal-open-html,html.cat-modal-open-html body{overflow:hidden;}
                 {{ $departments->count() }} department{{ $departments->count() === 1 ? '' : 's' }}.
             @endif
         </span>
-        @if($departments->isNotEmpty())
-            <button type="button" id="dept-catalog-open" class="linkbtn" style="padding:8px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;"><i class="fa fa-plus"></i> Add department</button>
-        @endif
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <a href="{{ route('hr.departments.growth') }}" class="linkbtn" style="padding:8px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:transparent;color:var(--text);border:1px solid var(--border);">
+                <i class="fa fa-chart-line"></i>{{ __('Growth overview') }}
+            </a>
+            @if($departments->isNotEmpty())
+                <button type="button" id="dept-catalog-open" class="linkbtn" style="padding:8px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;"><i class="fa fa-plus"></i> Add department</button>
+            @endif
+        </div>
     </div>
 
     @if($departments->isEmpty())
@@ -94,7 +99,11 @@ html.cat-modal-open-html,html.cat-modal-open-html body{overflow:hidden;}
                 <tbody>
                     @foreach($departments as $dept)
                         <tr>
-                            <td><strong style="color:var(--text);">{{ $dept->name }}</strong></td>
+                            <td>
+                                <a href="{{ route('hr.departments.show', $dept) }}" style="color:var(--primary);font-weight:700;text-decoration:none;">
+                                    {{ $dept->name }}
+                                </a>
+                            </td>
                             <td class="muted">{{ (int) $dept->employees_count }}</td>
                             <td style="text-align:right;">
                                 @if(((int) $dept->employees_count) === 0)
