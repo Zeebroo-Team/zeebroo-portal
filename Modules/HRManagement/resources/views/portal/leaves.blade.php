@@ -1,6 +1,6 @@
 @extends('theme::layouts.app', [
-    'title' => __('HR portal'),
-    'heading' => __('HR portal'),
+    'title' => __('My leaves'),
+    'heading' => __('My leaves'),
     'employeePortal' => true,
     'portalEmployerBusiness' => $portalEmployerBusiness,
     'portalEmployee' => $portalEmployee,
@@ -27,15 +27,15 @@
     <p class="emp-show__flash" role="status" style="max-width:920px;">{{ session('status') }}</p>
 @endif
 
-<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;max-width:920px;">
-    <a href="{{ route('hr.portal.profile') }}" class="linkbtn" style="padding:8px 14px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-        <i class="fa fa-id-card"></i>{{ __('My profile') }}
+<div style="margin-bottom:16px;">
+    <a href="{{ route('hr.portal.dashboard') }}" class="linkbtn" style="padding:8px 14px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        <i class="fa fa-arrow-left"></i>{{ __('Back to HR portal') }}
     </a>
 </div>
 
 <div class="card" style="max-width:920px;">
-    <h2 style="margin:0 0 14px;font-size:1rem;font-weight:700;">{{ __('Your recent leave requests') }}</h2>
-    @if($employee->leaveRequests->isEmpty())
+    <h2 style="margin:0 0 14px;font-size:1rem;font-weight:700;">{{ __('Leave requests') }}</h2>
+    @if($leaveRequests->isEmpty())
         <p class="muted" style="margin:0;">{{ __('No leave requests yet.') }}</p>
     @else
         <div style="overflow:auto;border:1px solid var(--border);border-radius:10px;">
@@ -50,7 +50,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($employee->leaveRequests as $lr)
+                    @foreach($leaveRequests as $lr)
                         <tr>
                             <td>
                                 @php
@@ -71,6 +71,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="emp-portal-pagination" style="margin-top:14px;">{{ $leaveRequests->links() }}</div>
     @endif
 </div>
 
@@ -84,5 +85,7 @@
     .emp-docs-table td{padding:9px 10px;border-bottom:1px solid color-mix(in srgb,var(--border)82%,transparent);vertical-align:middle;}
     .emp-docs-table tr:last-child td{border-bottom:none;}
     .emp-docs-table__meta{font-size:11px;color:var(--muted);}
+    .emp-portal-pagination nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;}
+    .emp-portal-pagination a,.emp-portal-pagination span{padding:4px 8px;border-radius:8px;border:1px solid var(--border);text-decoration:none;color:var(--text);}
 </style>
 @endsection

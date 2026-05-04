@@ -37,33 +37,33 @@ class EmployeePortalProvisioningService
             ];
         }
 
-        $user->loadMissing('hrEmployee');
+        $user->loadMissing('hrEmployees');
 
-        if ($user->hrEmployee === null) {
-            $employee->forceFill(['user_id' => $user->id])->save();
-
-            if (filled($user->google_id)) {
-                return [
-                    'scenario' => 'existing_google',
-                    'temporary_password' => null,
-                ];
-            }
-
-            return [
-                'scenario' => 'existing_password',
-                'temporary_password' => null,
-            ];
-        }
-
-        if ($user->hrEmployee->is($employee)) {
+        if ($user->hrEmployees->contains(fn (Employee $e) => $e->is($employee))) {
             return [
                 'scenario' => 'noop',
                 'temporary_password' => null,
             ];
         }
 
+        if ($employee->user_id !== null && (int) $employee->user_id !== (int) $user->id) {
+            return [
+                'scenario' => 'email_conflict',
+                'temporary_password' => null,
+            ];
+        }
+
+        $employee->forceFill(['user_id' => $user->id])->save();
+
+        if (filled($user->google_id)) {
+            return [
+                'scenario' => 'existing_google',
+                'temporary_password' => null,
+            ];
+        }
+
         return [
-            'scenario' => 'email_conflict',
+            'scenario' => 'existing_password',
             'temporary_password' => null,
         ];
     }

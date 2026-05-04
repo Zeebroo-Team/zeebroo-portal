@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Modules\Account\Models\Account;
@@ -58,10 +57,10 @@ class User extends Authenticatable
         return $this->hasMany(UserAppConnection::class);
     }
 
-    /** Linked HR employee profile (self-service portal), if any. */
-    public function hrEmployee(): HasOne
+    /** HR employee rows linked to this login (same person may work for multiple businesses). */
+    public function hrEmployees(): HasMany
     {
-        return $this->hasOne(Employee::class);
+        return $this->hasMany(Employee::class);
     }
 
     /**
@@ -73,7 +72,7 @@ class User extends Authenticatable
             return false;
         }
 
-        if (! $this->hrEmployee()->exists()) {
+        if (! $this->hrEmployees()->exists()) {
             return false;
         }
 

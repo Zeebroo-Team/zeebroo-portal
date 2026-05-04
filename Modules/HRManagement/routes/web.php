@@ -18,6 +18,11 @@ Route::post('hr-portal/login', [HrEmployeePortalController::class, 'login'])->na
 Route::middleware('auth')->group(function (): void {
     Route::get('hr-portal', [HrEmployeePortalController::class, 'dashboard'])->name('hr.portal.dashboard');
     Route::get('hr-portal/profile', [HrEmployeePortalController::class, 'profile'])->name('hr.portal.profile');
+    Route::get('hr-portal/leaves', [HrEmployeePortalController::class, 'leaves'])->name('hr.portal.leaves');
+    Route::get('hr-portal/complaints', [HrEmployeePortalController::class, 'complaints'])->name('hr.portal.complaints');
+    Route::post('hr-portal/complaints', [HrEmployeePortalController::class, 'storeComplaint'])->name('hr.portal.complaints.store');
+    Route::get('hr-portal/salary', [HrEmployeePortalController::class, 'salary'])->name('hr.portal.salary');
+    Route::post('hr-portal/switch-employer', [HrEmployeePortalController::class, 'switchEmployer'])->name('hr.portal.switch-employer');
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {

@@ -77,12 +77,6 @@ class Employee extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** Employee record linked to this login (HR self-service portal). */
-    public static function findForPortalUser(User $user): ?self
-    {
-        return static::query()->where('user_id', $user->id)->first();
-    }
-
     public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class);

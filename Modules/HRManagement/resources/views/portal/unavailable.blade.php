@@ -4,6 +4,7 @@
     'employeePortal' => true,
     'portalEmployerBusiness' => $employee->business ?? null,
     'portalEmployee' => $employee,
+    'portalEmployeeChoices' => $portalEmployeeChoices,
 ])
 
 @section('content')

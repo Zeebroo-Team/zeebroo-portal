@@ -75,8 +75,14 @@
                 <i class="fa-brands fa-google" aria-hidden="true"></i>{{ __('Continue with Google') }}
             </a>
         @endif
-        <p class="auth-meta">{!! __('Already registered? :link', ['link' => '<a href="'.e(route('login')).'">'.__('Sign in').'</a>']) !!}</p>
-        <p class="auth-meta" style="margin-top:14px;">{!! __('Employee access? :link', ['link' => '<a href="'.e(route('hr.portal.login')).'">'.__('HR portal sign in').'</a>']) !!}</p>
+        <div class="auth-alt-links" role="navigation" aria-label="{{ __('Other options') }}">
+            <a href="{{ route('login') }}" class="auth-alt-pill" title="{{ __('Sign in with an existing account') }}">
+                <i class="fa fa-right-to-bracket" aria-hidden="true"></i><span>{{ __('Sign in') }}</span>
+            </a>
+            <a href="{{ route('hr.portal.login') }}" class="auth-alt-pill auth-alt-pill--hr" title="{{ __('Employee HR portal sign-in') }}">
+                <i class="fa fa-users-gear" aria-hidden="true"></i><span>{{ __('HR portal') }}</span>
+            </a>
+        </div>
     </div>
 @endsection
 

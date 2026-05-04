@@ -174,6 +174,8 @@
             outline:none;
         }
         .dropdown-select:focus{border-color:var(--primary)}
+        .nav-portal-employer-form{margin:0;display:flex;align-items:center}
+        .nav-portal-employer-select{max-width:min(260px,42vw);min-width:120px;width:auto}
         .theme-switch{display:flex;justify-content:space-between;align-items:center;padding:8px 10px}
         .switch{position:relative;width:46px;height:26px}
         .switch input{opacity:0;width:0;height:0}
@@ -255,6 +257,9 @@
                 <div class="menu-section">{{ __('Self-service') }}</div>
                 <a href="{{ route('hr.portal.dashboard') }}" class="{{ request()->routeIs('hr.portal.dashboard') ? 'active' : '' }}"><i class="fa fa-house" aria-hidden="true"></i><span>{{ __('Home') }}</span></a>
                 <a href="{{ route('hr.portal.profile') }}" class="{{ request()->routeIs('hr.portal.profile') ? 'active' : '' }}"><i class="fa fa-user" aria-hidden="true"></i><span>{{ __('My profile') }}</span></a>
+                <a href="{{ route('hr.portal.leaves') }}" class="{{ request()->routeIs('hr.portal.leaves') ? 'active' : '' }}"><i class="fa fa-calendar-days" aria-hidden="true"></i><span>{{ __('My leaves') }}</span></a>
+                <a href="{{ route('hr.portal.complaints') }}" class="{{ request()->routeIs(['hr.portal.complaints', 'hr.portal.complaints.store']) ? 'active' : '' }}"><i class="fa fa-comments" aria-hidden="true"></i><span>{{ __('Complaints') }}</span></a>
+                <a href="{{ route('hr.portal.salary') }}" class="{{ request()->routeIs('hr.portal.salary') ? 'active' : '' }}"><i class="fa fa-money-check-dollar" aria-hidden="true"></i><span>{{ __('My salary') }}</span></a>
                 @if(Route::has('dashboard') && auth()->user() && ! auth()->user()->isHrPortalOnlyUser())
                     <div class="menu-section">{{ __('More') }}</div>
                     <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="fa fa-briefcase" aria-hidden="true"></i><span>{{ __('Workspace') }}</span></a>
@@ -350,7 +355,21 @@
             </div>
             <div class="nav-right">
                 @if($employeePortal)
-                    <div class="navchip" title="{{ __('Employer') }}">{{ $portalEmployerBusiness?->name ?? __('Employer') }}</div>
+                    @if(isset($portalEmployeeChoices) && $portalEmployeeChoices->count() > 1 && isset($portalEmployee))
+                        <form method="post" action="{{ route('hr.portal.switch-employer') }}" class="nav-portal-employer-form">
+                            @csrf
+                            <label for="portalEmployerSelect" class="muted" style="font-size:11px;margin-right:8px;text-transform:uppercase;letter-spacing:.06em;">{{ __('Employer') }}</label>
+                            <select name="employee_id" id="portalEmployerSelect" class="dropdown-select nav-portal-employer-select" aria-label="{{ __('Switch employer') }}" onchange="this.form.submit()">
+                                @foreach($portalEmployeeChoices as $empChoice)
+                                    <option value="{{ $empChoice->id }}" {{ (int) $portalEmployee->id === (int) $empChoice->id ? 'selected' : '' }}>
+                                        {{ $empChoice->business?->name ?? __('Employer') }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @else
+                        <div class="navchip" title="{{ __('Employer') }}">{{ $portalEmployerBusiness?->name ?? __('Employer') }}</div>
+                    @endif
                     @if(Route::has('dashboard') && auth()->user() && ! auth()->user()->isHrPortalOnlyUser())
                         <a href="{{ route('dashboard') }}" class="user-trigger" style="font-size:12px;font-weight:650;padding:6px 10px;">
                             <i class="fa fa-briefcase" aria-hidden="true"></i><span>{{ __('Workspace') }}</span>

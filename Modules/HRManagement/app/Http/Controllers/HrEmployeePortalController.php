@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Modules\HRManagement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Modules\Business\Models\Business;
+use Modules\HRManagement\Models\Employee;
+use Modules\HRManagement\Models\HrComplaint;
+use Modules\HRManagement\Models\LeaveRequest;
 use Modules\HRManagement\Services\EmployeePortalService;
 use Modules\HRManagement\Services\HrPayrollSettingsService;
 
@@ -93,6 +99,7 @@ class HrEmployeePortalController extends Controller
             return view('hrmanagement::portal.unavailable', [
                 'employee' => $employee,
                 'heading' => __('HR portal'),
+                'portalEmployeeChoices' => $this->employeePortal->linkedEmployeesForUser($user),
             ]);
         }
 
@@ -104,7 +111,24 @@ class HrEmployeePortalController extends Controller
             'employeePortal' => true,
             'portalEmployerBusiness' => $business,
             'portalEmployee' => $employee,
+            'portalEmployeeChoices' => $this->employeePortal->linkedEmployeesForUser($user),
         ]);
+    }
+
+    public function switchEmployer(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'employee_id' => ['required', 'integer'],
+        ]);
+
+        $user = $request->user();
+        if (! $this->employeePortal->setPortalEmployee($user, (int) $request->input('employee_id'))) {
+            return back()->withErrors([
+                'employer' => __('That employer is not available for your account.'),
+            ]);
+        }
+
+        return back();
     }
 
     public function profile(Request $request): View|RedirectResponse
@@ -122,6 +146,7 @@ class HrEmployeePortalController extends Controller
             return view('hrmanagement::portal.unavailable', [
                 'employee' => $employee,
                 'heading' => __('HR portal'),
+                'portalEmployeeChoices' => $this->employeePortal->linkedEmployeesForUser($user),
             ]);
         }
 
@@ -131,7 +156,140 @@ class HrEmployeePortalController extends Controller
             'employeePortal' => true,
             'portalEmployerBusiness' => $business,
             'portalEmployee' => $employee,
+            'portalEmployeeChoices' => $this->employeePortal->linkedEmployeesForUser($user),
         ]);
+    }
+
+    public function leaves(Request $request): View|RedirectResponse
+    {
+        $gate = $this->assertPortalEmployerAvailable($request);
+        if ($gate instanceof RedirectResponse || $gate instanceof View) {
+            return $gate;
+        }
+
+        /** @var array{user: User, employee: Employee, business: Business, choices: Collection} $gate */
+        ['employee' => $employee, 'business' => $business, 'choices' => $choices] = $gate;
+
+        $leaveRequests = LeaveRequest::query()
+            ->where('employee_id', $employee->id)
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('hrmanagement::portal.leaves', [
+            'employee' => $employee,
+            'leaveRequests' => $leaveRequests,
+            'heading' => __('My leaves'),
+            'employeePortal' => true,
+            'portalEmployerBusiness' => $business,
+            'portalEmployee' => $employee,
+            'portalEmployeeChoices' => $choices,
+        ]);
+    }
+
+    public function complaints(Request $request): View|RedirectResponse
+    {
+        $gate = $this->assertPortalEmployerAvailable($request);
+        if ($gate instanceof RedirectResponse || $gate instanceof View) {
+            return $gate;
+        }
+
+        /** @var array{user: User, employee: Employee, business: Business, choices: Collection} $gate */
+        ['employee' => $employee, 'business' => $business, 'choices' => $choices] = $gate;
+
+        $complaints = HrComplaint::query()
+            ->where('employee_id', $employee->id)
+            ->where('business_id', $employee->business_id)
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('hrmanagement::portal.complaints', [
+            'employee' => $employee,
+            'complaints' => $complaints,
+            'heading' => __('Complaints'),
+            'employeePortal' => true,
+            'portalEmployerBusiness' => $business,
+            'portalEmployee' => $employee,
+            'portalEmployeeChoices' => $choices,
+        ]);
+    }
+
+    public function storeComplaint(Request $request): View|RedirectResponse
+    {
+        $gate = $this->assertPortalEmployerAvailable($request);
+        if ($gate instanceof RedirectResponse || $gate instanceof View) {
+            return $gate;
+        }
+
+        /** @var array{user: User, employee: Employee, business: Business, choices: Collection} $gate */
+        ['user' => $user, 'employee' => $employee] = $gate;
+
+        $validated = $request->validate([
+            'subject' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string', 'max:10000'],
+        ]);
+
+        HrComplaint::query()->create([
+            'business_id' => $employee->business_id,
+            'employee_id' => $employee->id,
+            'subject' => $validated['subject'],
+            'body' => $validated['body'],
+            'status' => HrComplaint::STATUS_OPEN,
+            'recorded_by_user_id' => $user->id,
+        ]);
+
+        return redirect()
+            ->route('hr.portal.complaints')
+            ->with('status', __('Your complaint has been submitted.'));
+    }
+
+    public function salary(Request $request): View|RedirectResponse
+    {
+        $gate = $this->assertPortalEmployerAvailable($request);
+        if ($gate instanceof RedirectResponse || $gate instanceof View) {
+            return $gate;
+        }
+
+        /** @var array{user: User, employee: Employee, business: Business, choices: Collection} $gate */
+        ['employee' => $employee, 'business' => $business, 'choices' => $choices] = $gate;
+
+        $employee->load(['employeeAllowances.allowanceType']);
+
+        return view('hrmanagement::portal.salary', [
+            'employee' => $employee,
+            'heading' => __('My salary'),
+            'employeePortal' => true,
+            'portalEmployerBusiness' => $business,
+            'portalEmployee' => $employee,
+            'portalEmployeeChoices' => $choices,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>|View|RedirectResponse
+     */
+    private function assertPortalEmployerAvailable(Request $request): array|View|RedirectResponse
+    {
+        $user = $request->user();
+        $employee = $this->employeePortal->linkAndResolve($user);
+        if ($employee === null) {
+            return redirect()->route('hr.portal.login');
+        }
+
+        $choices = $this->employeePortal->linkedEmployeesForUser($user);
+        $employee->loadMissing('business');
+        $business = $employee->business;
+
+        if ($business === null || ! $this->hrPayrollSettings->optedIn($business)) {
+            return view('hrmanagement::portal.unavailable', [
+                'employee' => $employee,
+                'heading' => __('HR portal'),
+                'portalEmployeeChoices' => $choices,
+            ]);
+        }
+
+        return compact('user', 'employee', 'business', 'choices');
     }
 
     private function googleOAuthConfigured(): bool
