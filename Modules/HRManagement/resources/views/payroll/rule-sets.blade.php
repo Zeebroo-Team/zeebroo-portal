@@ -132,7 +132,7 @@
         .payroll-add-rule-details summary::marker{display:none}
 
         .payroll-rule-set-cards{display:flex;flex-direction:column;gap:12px}
-        .payroll-rule-set-card{border:1px solid color-mix(in srgb,var(--border)90%,transparent);border-radius:12px;background:color-mix(in srgb,var(--card)100%,transparent);padding:12px 14px;width:100%}
+        .payroll-rule-set-card{border:1px solid color-mix(in srgb,var(--border)90%,transparent);border-radius:12px;background:color-mix(in srgb,var(--card)100%,transparent);padding:12px 14px;}
         .payroll-rule-set-head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
         .payroll-rule-set-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:140px}
         .payroll-rule-set-effective{font-size:9.5px;line-height:1.25;color:var(--muted)}
