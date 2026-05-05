@@ -1,88 +1,226 @@
 @extends('theme::layouts.app', ['title' => __('Salary sheet'), 'heading' => __('Salary sheet')])
 
+@php
+    $sheetCurrency = $cycle->ruleSet?->currency ?: ($business->currency ?? 'LKR');
+    $cycleStatusRaw = strtolower((string) $cycle->status);
+    $cycleStatusLabel = match ($cycleStatusRaw) {
+        'finalized' => __('Finalized'),
+        'computed' => __('Computed'),
+        'draft' => __('Draft'),
+        default => __(ucfirst((string) $cycle->status)),
+    };
+@endphp
+
 @section('content')
     <style>
-        .salary-sheet{max-width:1180px;display:grid;gap:12px}
-        .salary-sheet__card{border:1px solid color-mix(in srgb,var(--border)90%,transparent);border-radius:12px;background:var(--card);padding:12px 14px}
-        .salary-sheet__head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:flex-start}
-        .salary-sheet__title{margin:0;font-size:1rem;font-weight:800}
-        .salary-sheet__sub{margin:4px 0 0;font-size:12px;color:var(--muted)}
-        .salary-sheet__actions{display:flex;gap:8px;flex-wrap:wrap}
-        .salary-sheet__kpis{display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
-        .salary-sheet__kpi{padding:9px;border:1px solid color-mix(in srgb,var(--border)88%,transparent);border-radius:10px;background:color-mix(in srgb,var(--card)96%,transparent)}
-        .salary-sheet__kpi small{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-        .salary-sheet__kpi strong{display:block;margin-top:4px;font-size:14px}
-        .salary-sheet__table-wrap{overflow:auto;border:1px solid color-mix(in srgb,var(--border)88%,transparent);border-radius:10px;background:color-mix(in srgb,var(--card)98%,transparent)}
-        .salary-sheet__table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0}
-        .salary-sheet__table thead th{background:color-mix(in srgb,var(--card)94%,transparent);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;padding:8px;border-bottom:1px solid color-mix(in srgb,var(--border)82%,transparent);white-space:nowrap}
-        .salary-sheet__table tbody td{padding:8px;border-bottom:1px solid color-mix(in srgb,var(--border)74%,transparent);vertical-align:top}
+        .salary-sheet-page{max-width:1280px;margin:0 auto;display:grid;gap:14px}
+        .salary-sheet-hero{
+            border:1px solid color-mix(in srgb,var(--border)90%,transparent);
+            border-radius:14px;
+            background:var(--card);
+            padding:16px 18px;
+            box-shadow:0 1px 0 color-mix(in srgb,var(--border)55%,transparent) inset,0 8px 22px rgba(0,0,0,.045);
+        }
+        .salary-sheet-hero__top{display:flex;flex-wrap:wrap;gap:12px 16px;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+        .salary-sheet-hero__title{margin:0;font-size:1.06rem;font-weight:800;letter-spacing:-.02em;line-height:1.25;color:var(--text)}
+        .salary-sheet-hero__subtitle{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--muted);max-width:720px}
+        .salary-sheet-meta{display:flex;flex-wrap:wrap;gap:8px 10px;margin:12px 0 0;padding:0;list-style:none}
+        .salary-sheet-meta__item{
+            display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:750;
+            text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+            padding:5px 10px;border-radius:999px;
+            border:1px solid color-mix(in srgb,var(--border)82%,transparent);
+            background:color-mix(in srgb,var(--card)94%,transparent);
+        }
+        .salary-sheet-meta__item span{font-weight:800;color:var(--text);text-transform:none;letter-spacing:0;font-size:11px}
+        .salary-sheet-meta__item i.fa{font-size:11px;opacity:.88;color:color-mix(in srgb,var(--primary)72%,var(--muted))}
+
+        .salary-sheet-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .salary-sheet-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid color-mix(in srgb,var(--primary)42%,var(--border));background:color-mix(in srgb,var(--primary)12%,transparent);color:var(--text);transition:background .15s ease}
+        .salary-sheet-btn:hover{background:color-mix(in srgb,var(--primary)20%,transparent);color:var(--text)}
+        .salary-sheet-btn--muted{border-color:color-mix(in srgb,var(--border)88%,transparent);background:color-mix(in srgb,var(--card)96%,transparent)}
+        .salary-sheet-btn--muted:hover{background:color-mix(in srgb,var(--primary)10%,transparent)}
+
+        .salary-sheet-kpis{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+        .salary-sheet-kpi{
+            position:relative;
+            padding:12px 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border)88%,transparent);
+            background:linear-gradient(165deg,color-mix(in srgb,var(--card)99%,transparent),color-mix(in srgb,var(--primary)7%,transparent));
+            overflow:hidden;
+        }
+        .salary-sheet-kpi::after{
+            content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;
+            background:color-mix(in srgb,var(--primary)55%,transparent);
+            opacity:.75;
+        }
+        .salary-sheet-kpi--net::after{background:color-mix(in srgb,#22c55e 62%,var(--primary));}
+        .salary-sheet-kpi--deductions::after{background:color-mix(in srgb,#f97316 55%,var(--primary));}
+        .salary-sheet-kpi-label{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+        .salary-sheet-kpi-label i.fa{font-size:11px;color:color-mix(in srgb,var(--primary)68%,var(--muted));}
+        .salary-sheet-kpi-value{margin:0;font-size:clamp(14px,1.9vw,17px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.2;color:var(--text)}
+        .salary-sheet-kpi-curr{display:block;margin-top:4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+        .salary-sheet-table-card{
+            border:1px solid color-mix(in srgb,var(--border)88%,transparent);
+            border-radius:14px;background:var(--card);
+            padding:12px 14px;
+            box-shadow:0 1px 0 color-mix(in srgb,var(--border)50%,transparent) inset;
+        }
+        .salary-sheet-table-card__caption{margin:0 0 10px;font-size:11px;font-weight:750;color:var(--muted)}
+        .salary-sheet-table-card__caption strong{font-weight:800;color:var(--text)}
+        .salary-sheet-scroll{
+            overflow:auto;
+            margin:0 -2px;border:1px solid color-mix(in srgb,var(--border)82%,transparent);
+            border-radius:10px;background:color-mix(in srgb,var(--card)98%,transparent);
+            -webkit-overflow-scrolling:touch;
+            max-height:min(70vh,920px);
+        }
+        .salary-sheet-scroll::-webkit-scrollbar{height:10px;width:10px}
+        .salary-sheet-scroll::-webkit-scrollbar-thumb{border-radius:8px;background:color-mix(in srgb,var(--border)65%,transparent)}
+
+        .salary-sheet__table{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0}
+        .salary-sheet__table thead th{
+            position:sticky;top:0;z-index:3;
+            background:color-mix(in srgb,var(--card)92%,transparent);
+            color:var(--muted);
+            font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;
+            padding:10px 9px;border-bottom:1px solid color-mix(in srgb,var(--border)78%,transparent);
+            white-space:nowrap;
+            box-shadow:0 1px 0 color-mix(in srgb,var(--border)70%,transparent);
+        }
+        .salary-sheet__table tbody td{
+            padding:9px 9px;border-bottom:1px solid color-mix(in srgb,var(--border)70%,transparent);
+            vertical-align:middle;font-size:12px;
+        }
         .salary-sheet__table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--card)97%,transparent)}
+        .salary-sheet__table tbody tr:hover td{background:color-mix(in srgb,var(--primary)7%,transparent)}
         .salary-sheet__table tbody tr:last-child td{border-bottom:none}
-        .salary-sheet__table th + th,.salary-sheet__table td + td{border-left:1px solid color-mix(in srgb,var(--border)68%,transparent)}
-        .salary-sheet__name{font-size:13px;font-weight:700;line-height:1.3}
-        .salary-sheet__meta{font-size:11px;color:var(--muted)}
-        .salary-sheet__num{text-align:right;font-variant-numeric:tabular-nums}
+        .salary-sheet__table th + th,.salary-sheet__table td + td{border-left:1px solid color-mix(in srgb,var(--border)55%,transparent)}
+
+        .salary-sheet__table th.salary-sheet__th--employ,.salary-sheet__table td.salary-sheet__cell--employ{
+            position:sticky;left:0;z-index:2;
+            min-width:170px;max-width:240px;
+            box-shadow:1px 0 0 color-mix(in srgb,var(--border)65%,transparent);
+        }
+        .salary-sheet__table thead th.salary-sheet__th--employ{z-index:4;background:color-mix(in srgb,var(--card)92%,transparent)}
+        .salary-sheet__table td.salary-sheet__cell--employ{background:var(--card)}
+        .salary-sheet__table tbody tr:nth-child(even) td.salary-sheet__cell--employ{background:color-mix(in srgb,var(--card)97%,transparent)}
+        .salary-sheet__table tbody tr:hover td.salary-sheet__cell--employ{background:color-mix(in srgb,var(--primary)7%,transparent)}
+
+        .salary-sheet__name{display:block;font-size:12.5px;font-weight:750;line-height:1.3;color:var(--text)}
+        .salary-sheet__meta{display:block;margin-top:3px;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+        .salary-sheet__num{text-align:right;font-variant-numeric:tabular-nums;font-weight:650;font-size:12px}
+        .salary-sheet__num--emph{font-weight:800;color:color-mix(in srgb,var(--primary)42%,var(--text))}
         .salary-sheet__center{text-align:center}
-        @media (max-width:980px){.salary-sheet__kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .salary-sheet__status{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.03em;border:1px solid var(--border);background:color-mix(in srgb,var(--card)96%,transparent);color:var(--muted);white-space:nowrap}
+        .salary-sheet__status--finalized{border-color:color-mix(in srgb,#22c55e 45%,var(--border));color:#15803d;background:color-mix(in srgb,#22c55e 10%,transparent)}
+        .salary-sheet__status--draft{border-color:color-mix(in srgb,var(--primary)38%,var(--border));color:color-mix(in srgb,var(--primary)78%,var(--text));background:color-mix(in srgb,var(--primary)10%,transparent)}
+
+        .salary-sheet-empty{padding:28px 16px;text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
+        .salary-sheet-empty i.fa{display:block;margin:0 auto 10px;font-size:28px;opacity:.35;color:var(--muted)}
+
+        @media (max-width:1100px){.salary-sheet-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media (max-width:640px){
+            .salary-sheet-kpis{grid-template-columns:1fr}
+            .salary-sheet-hero{padding:14px}
+            .salary-sheet-scroll{max-height:min(65vh,720px)}
+        }
+
+        @media print{
+            .salary-sheet-actions,.sidebar,.navbar,.content-inner > *:not(.salary-sheet-page){display:none!important}
+            .content,.content-inner{margin:0!important;padding:8px!important;max-width:none!important}
+            .salary-sheet-page{max-width:none;gap:10px}
+            .salary-sheet-scroll{max-height:none;overflow:visible;border:none}
+            .salary-sheet__table th,.salary-sheet__table td.salary-sheet__cell--employ{position:static!important;box-shadow:none!important}
+            .salary-sheet__table tbody tr:hover td{background:transparent!important}
+            .salary-sheet-hero,.salary-sheet-table-card{box-shadow:none;border:1px solid #ccc}
+        }
     </style>
 
     @if(session('status'))
-        <p class="emp-show__flash" role="status" style="max-width:1120px;">{{ session('status') }}</p>
+        <p class="emp-show__flash" role="status" style="max-width:1280px;margin:0 auto;">{{ session('status') }}</p>
     @endif
     @if(session('warning'))
-        <p class="emp-show__err" role="alert" style="max-width:1120px;">{{ session('warning') }}</p>
+        <p class="emp-show__err" role="alert" style="max-width:1280px;margin:0 auto;">{{ session('warning') }}</p>
     @endif
     @if($errors->any())
-        <div class="emp-show__err" role="alert" style="max-width:1120px;">
+        <div class="emp-show__err" role="alert" style="max-width:1280px;margin:0 auto;">
             <ul style="margin:0;padding-left:18px;">@foreach($errors->all() as $msg)<li>{{ $msg }}</li>@endforeach</ul>
         </div>
     @endif
 
-    <div class="salary-sheet">
-        <section class="salary-sheet__card">
-            <div class="salary-sheet__head">
+    <div class="salary-sheet-page">
+        <header class="salary-sheet-hero">
+            <div class="salary-sheet-hero__top">
                 <div>
-                    <h2 class="salary-sheet__title">{{ __('Monthly salary sheet') }} — {{ $cycle->name }}</h2>
-                    <p class="salary-sheet__sub">{{ __('Period') }}: {{ $cycle->period_start?->format('Y-m-d') }} → {{ $cycle->period_end?->format('Y-m-d') }} · {{ __('Rule set') }}: {{ $cycle->ruleSet?->name ?? '—' }}</p>
+                    <h1 class="salary-sheet-hero__title">{{ __('Salary sheet') }} — {{ $cycle->name }}</h1>
+                    <p class="salary-sheet-hero__subtitle">{{ __('Period totals and employee lines for this payroll cycle. Amounts are shown in :currency.', ['currency' => $sheetCurrency]) }}</p>
+                    <ul class="salary-sheet-meta" aria-label="{{ __('Cycle details') }}">
+                        <li class="salary-sheet-meta__item"><i class="fa fa-calendar-days" aria-hidden="true"></i>{{ __('Period') }} <span>{{ $cycle->period_start?->format('M j, Y') }} — {{ $cycle->period_end?->format('M j, Y') }}</span></li>
+                        <li class="salary-sheet-meta__item"><i class="fa fa-layer-group" aria-hidden="true"></i>{{ __('Rule set') }} <span>{{ $cycle->ruleSet?->name ?? '—' }}</span></li>
+                        <li class="salary-sheet-meta__item"><i class="fa fa-coins" aria-hidden="true"></i>{{ __('Currency') }} <span>{{ $sheetCurrency }}</span></li>
+                        <li class="salary-sheet-meta__item"><i class="fa fa-flag-checkered" aria-hidden="true"></i>{{ __('Cycle status') }} <span>{{ $cycleStatusLabel }}</span></li>
+                    </ul>
                 </div>
-                <div class="salary-sheet__actions">
-                    <a href="{{ route('hr.payroll.cycles.show', $cycle) }}" class="emp-docs-action">{{ __('Back to cycle') }}</a>
-                    <a href="{{ route('hr.payroll.index') }}" class="emp-docs-action">{{ __('Payroll home') }}</a>
+                <div class="salary-sheet-actions">
+                    <a href="{{ route('hr.payroll.cycles.show', $cycle) }}" class="salary-sheet-btn salary-sheet-btn--muted"><i class="fa fa-arrow-left" aria-hidden="true"></i>{{ __('Back to cycle') }}</a>
+                    <a href="{{ route('hr.payroll.index') }}" class="salary-sheet-btn"><i class="fa fa-money-check-dollar" aria-hidden="true"></i>{{ __('Payroll home') }}</a>
                 </div>
             </div>
-        </section>
 
-        <section class="salary-sheet__card">
-            <div class="salary-sheet__kpis">
-                <article class="salary-sheet__kpi"><small>{{ __('Employees') }}</small><strong>{{ count($rows) }}</strong></article>
-                <article class="salary-sheet__kpi"><small>{{ __('Total gross') }}</small><strong>{{ number_format((float) $summary['total_gross'], 2) }}</strong></article>
-                <article class="salary-sheet__kpi"><small>{{ __('Total deductions') }}</small><strong>{{ number_format((float) $summary['total_deductions'], 2) }}</strong></article>
-                <article class="salary-sheet__kpi"><small>{{ __('Total net') }}</small><strong>{{ number_format((float) $summary['total_net'], 2) }}</strong></article>
+            <div class="salary-sheet-kpis" role="region" aria-label="{{ __('Totals') }}">
+                <article class="salary-sheet-kpi">
+                    <p class="salary-sheet-kpi-label"><i class="fa fa-users" aria-hidden="true"></i>{{ __('Employees') }}</p>
+                    <p class="salary-sheet-kpi-value">{{ count($rows) }}</p>
+                </article>
+                <article class="salary-sheet-kpi">
+                    <p class="salary-sheet-kpi-label"><i class="fa fa-arrow-trend-up" aria-hidden="true"></i>{{ __('Total gross') }}</p>
+                    <p class="salary-sheet-kpi-value">{{ number_format((float) $summary['total_gross'], 2) }}</p>
+                    <span class="salary-sheet-kpi-curr">{{ $sheetCurrency }}</span>
+                </article>
+                <article class="salary-sheet-kpi salary-sheet-kpi--deductions">
+                    <p class="salary-sheet-kpi-label"><i class="fa fa-arrow-trend-down" aria-hidden="true"></i>{{ __('Total deductions') }}</p>
+                    <p class="salary-sheet-kpi-value">{{ number_format((float) $summary['total_deductions'], 2) }}</p>
+                    <span class="salary-sheet-kpi-curr">{{ $sheetCurrency }}</span>
+                </article>
+                <article class="salary-sheet-kpi salary-sheet-kpi--net">
+                    <p class="salary-sheet-kpi-label"><i class="fa fa-wallet" aria-hidden="true"></i>{{ __('Total net') }}</p>
+                    <p class="salary-sheet-kpi-value">{{ number_format((float) $summary['total_net'], 2) }}</p>
+                    <span class="salary-sheet-kpi-curr">{{ $sheetCurrency }}</span>
+                </article>
             </div>
-        </section>
+        </header>
 
-        <section class="salary-sheet__card">
-            <div class="salary-sheet__table-wrap">
+        <section class="salary-sheet-table-card">
+            <p class="salary-sheet-table-card__caption" id="salary-sheet-table-desc"><strong>{{ __('Detail') }}</strong> — {{ __('Scroll horizontally if needed; the employee column stays visible.') }}</p>
+            <div class="salary-sheet-scroll" role="region" aria-labelledby="salary-sheet-table-desc" tabindex="0">
                 <table class="salary-sheet__table">
                     <thead>
                         <tr>
-                            <th>{{ __('Employee') }}</th>
-                            <th>{{ __('Basic') }}</th>
-                            <th>{{ __('OT') }}</th>
-                            <th>{{ __('Gross') }}</th>
-                            <th>{{ __('EPF Emp.') }}</th>
-                            <th>{{ __('EPF Emplr.') }}</th>
-                            <th>{{ __('ETF Emplr.') }}</th>
-                            <th>{{ __('APIT') }}</th>
-                            <th>{{ __('Deductions') }}</th>
-                            <th>{{ __('Net pay') }}</th>
-                            <th>{{ __('Status') }}</th>
+                            <th scope="col" class="salary-sheet__th--employ">{{ __('Employee') }}</th>
+                            <th scope="col">{{ __('Basic') }}</th>
+                            <th scope="col">{{ __('OT') }}</th>
+                            <th scope="col">{{ __('Gross') }}</th>
+                            <th scope="col">{{ __('EPF Emp.') }}</th>
+                            <th scope="col">{{ __('EPF Emplr.') }}</th>
+                            <th scope="col">{{ __('ETF Emplr.') }}</th>
+                            <th scope="col">{{ __('APIT') }}</th>
+                            <th scope="col">{{ __('Deductions') }}</th>
+                            <th scope="col">{{ __('Net pay') }}</th>
+                            <th scope="col">{{ __('Status') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($rows as $row)
+                            @php
+                                $rowStatusRaw = strtolower((string) ($row['status'] ?? ''));
+                                $statusClass = str_contains($rowStatusRaw, 'final') ? 'salary-sheet__status--finalized' : 'salary-sheet__status--draft';
+                            @endphp
                             <tr>
-                                <td><span class="salary-sheet__name">{{ $row['employee_name'] }}</span><br><span class="salary-sheet__meta">{{ $row['employee_id'] }}</span></td>
+                                <td class="salary-sheet__cell--employ">
+                                    <span class="salary-sheet__name">{{ $row['employee_name'] }}</span>
+                                    <span class="salary-sheet__meta">{{ __('ID') }}: {{ $row['employee_id'] ?: '—' }}</span>
+                                </td>
                                 <td class="salary-sheet__num">{{ number_format((float) $row['basic_salary'], 2) }}</td>
                                 <td class="salary-sheet__num">{{ number_format((float) $row['overtime_amount'], 2) }}</td>
                                 <td class="salary-sheet__num">{{ number_format((float) $row['gross_earnings'], 2) }}</td>
@@ -91,11 +229,16 @@
                                 <td class="salary-sheet__num">{{ number_format((float) $row['etf_employer'], 2) }}</td>
                                 <td class="salary-sheet__num">{{ number_format((float) $row['apit'], 2) }}</td>
                                 <td class="salary-sheet__num">{{ number_format((float) $row['total_deductions'], 2) }}</td>
-                                <td class="salary-sheet__num"><strong>{{ number_format((float) $row['net_pay'], 2) }}</strong></td>
-                                <td class="salary-sheet__center">{{ $row['status'] }}</td>
+                                <td class="salary-sheet__num salary-sheet__num--emph">{{ number_format((float) $row['net_pay'], 2) }}</td>
+                                <td class="salary-sheet__center"><span class="salary-sheet__status {{ $statusClass }}">{{ $row['status'] }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="11" class="muted">{{ __('No salary sheet rows found. Generate this cycle first.') }}</td></tr>
+                            <tr>
+                                <td colspan="11" class="salary-sheet-empty">
+                                    <i class="fa fa-table" aria-hidden="true"></i>
+                                    {{ __('No salary sheet rows found. Compute or finalize this cycle, then generate the sheet.') }}
+                                </td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>

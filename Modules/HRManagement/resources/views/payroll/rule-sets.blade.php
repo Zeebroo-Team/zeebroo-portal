@@ -32,6 +32,8 @@
         .payroll-chip--ok{border-color:color-mix(in srgb,#22c55e 42%,var(--border));color:#15803d;background:color-mix(in srgb,#22c55e 10%,transparent)}
         .payroll-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;border:1px solid color-mix(in srgb,var(--primary)42%,var(--border));background:color-mix(in srgb,var(--primary)12%,transparent);color:var(--text);font-size:12px;font-weight:700;cursor:pointer}
         .payroll-btn:hover{background:color-mix(in srgb,var(--primary)18%,transparent)}
+        button.payroll-btn:disabled,.payroll-btn[disabled]{opacity:.5;cursor:not-allowed}
+        button.payroll-btn:disabled:hover,.payroll-btn[disabled]:hover{background:color-mix(in srgb,var(--primary)12%,transparent)}
         .payroll-rule-form{display:grid;gap:5px;grid-template-columns:repeat(3,minmax(100px,1fr));padding:5px;border:1px solid color-mix(in srgb,var(--border)84%,transparent);border-radius:8px;background:color-mix(in srgb,var(--card)98%,transparent)}
         .payroll-rule-list{
             margin-top:8px;
@@ -153,7 +155,15 @@
             padding:18px;
         }
         .payroll-modal-overlay.is-open{display:flex}
-        #payflowEditorOverlay{padding:clamp(6px,1vmin,12px)}
+        /* Flow designer: scroll the overlay instead of vertically centering a tall modal (avoids clipped header/footer). */
+        #payflowEditorOverlay{padding:clamp(8px,1.8vmin,14px)}
+        #payflowEditorOverlay.is-open{
+            align-items:flex-start;
+            justify-content:center;
+            overflow-x:hidden;
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+        }
         .payroll-modal{
             width:100%;
             max-width:760px;
@@ -192,17 +202,29 @@
             border-color:color-mix(in srgb,var(--border)88%,transparent);
             background:color-mix(in srgb,var(--card)96%,transparent);
         }
+        /* Add/edit rule modal: allow scroll when the form exceeds the viewport. */
+        #payrollRuleModalOverlay .payroll-modal,
+        #payrollRuleSetModalOverlay .payroll-modal{
+            max-height:min(92vh,calc(100vh - 32px));
+            overflow-x:hidden;
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+        @media (max-width:640px){
+            .payroll-rule-form{grid-template-columns:1fr;gap:8px;padding:8px}
+        }
         .payroll-rule-help{display:block;margin-top:4px;font-size:10px;line-height:1.35;color:var(--muted)}
         .payroll-field-help{display:block;margin-top:4px;font-size:10px;line-height:1.35;color:var(--muted)}
 
         /* D3 flow editor — modal ~98% of viewport */
         .payroll-modal.payroll-flow-modal--wide{
             width:98vw;
-            max-width:min(98vw, calc(100vw - 12px));
-            max-height:98vh;
+            max-width:min(98vw, calc(100vw - 24px));
+            max-height:min(calc(100vh - 24px),98vh);
+            height:min(96vh,calc(100vh - 28px));
             box-sizing:border-box;
             overflow-x:hidden;
-            overflow-y:auto;
+            overflow-y:hidden;
             display:flex;
             flex-direction:column;
         }
@@ -222,7 +244,7 @@
             border-bottom:1px solid color-mix(in srgb,var(--border)72%,transparent);
         }
         .payflow-flow-modal-top .payflow-logic-tools{
-            margin:0 0 10px 0;
+            margin:0 0 6px 0;
             width:100%;
             max-width:none;
             flex-basis:auto;
@@ -230,10 +252,9 @@
             border-radius:0;
             border-left:0;
             border-right:0;
-            padding:8px 14px 10px 14px;
+            padding:2px 10px 6px 10px;
         }
-        .payflow-flow-modal-top .payflow-logic-toolbar-bar{padding-left:0;padding-right:0;margin-inline:0}
-        .payflow-flow-modal-top .payflow-logic-tools__body{gap:6px}
+        .payflow-flow-modal-top .payflow-logic-tools__body{gap:4px}
         .payflow-flow-modal-top .payflow-logic-block.is-visible{gap:6px}
         .payflow-flow-modal-top .payflow-logic-block--stack{padding-left:10px}
         .payflow-flow-modal-top .payflow-logic-chips{flex:0 1 auto}
@@ -242,30 +263,107 @@
             min-height:0;
             display:flex;
             flex-direction:column;
+            overflow:hidden;
         }
         .payroll-modal.payroll-flow-modal--wide #payflowSaveForm > .payroll-flow-help{flex-shrink:0}
         .payroll-modal.payroll-flow-modal--wide #payflowSaveForm > .payroll-modal__actions{flex-shrink:0;margin-top:auto}
         .payroll-modal.payroll-flow-modal--wide .payroll-flow-editor-layout{
             flex:1;
             min-height:0;
+            display:flex;
+            flex-direction:column;
+            flex-wrap:nowrap;
+            align-items:stretch;
+            gap:12px;
+            margin-top:6px;
+            overflow:hidden;
+        }
+        .payroll-modal.payroll-flow-modal--wide .payflow-flow-editor-workspace{
+            flex:1;
+            min-height:0;
+            min-width:0;
+            display:flex;
+            flex-direction:row;
+            flex-wrap:nowrap;
+            align-items:stretch;
+            gap:12px;
+            overflow:hidden;
         }
         .payroll-flow-editor-layout{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-top:6px}
+        .payroll-modal.payroll-flow-modal--wide .payflow-formula-chrome{
+            flex-shrink:0;
+            width:100%;
+            max-width:100%;
+        }
         .payroll-flow-svg-wrap{
             flex:1;min-width:300px;border:1px solid color-mix(in srgb,var(--border)80%,transparent);
             border-radius:12px;background:color-mix(in srgb,var(--primary)5%,transparent);
             overflow:hidden;
             min-height:min(76vh,720px)
         }
-        .payroll-modal.payroll-flow-modal--wide .payroll-flow-svg-wrap svg{
-            display:block;width:100%;
-            height:min(calc(98vh - 220px),800px);
-            min-height:280px;
-            font-family:system-ui,sans-serif;touch-action:none
+        .payroll-modal.payroll-flow-modal--wide .payroll-flow-svg-wrap{
+            flex:1 1 0;
+            min-width:min(100%,280px);
+            min-height:0;
+            max-height:none;
+            overflow:auto;
+            display:flex;
+            flex-direction:column;
+            -webkit-overflow-scrolling:touch;
         }
+        .payroll-modal.payroll-flow-modal--wide .payroll-flow-svg-wrap svg{
+            display:block;
+            width:100%;
+            flex:1 1 auto;
+            align-self:stretch;
+            min-height:clamp(260px,min(42vh,480px),520px);
+            height:100%;
+            max-height:none;
+            box-sizing:border-box;
+            font-family:system-ui,sans-serif;touch-action:none;
+        }
+        .payroll-modal.payroll-flow-modal--wide .payroll-flow-svg-wrap .payflow-load-error{flex-shrink:0}
         .payroll-flow-sidebar{
             flex:1;min-width:240px;max-width:360px;padding:10px;border:1px solid color-mix(in srgb,var(--border)82%,transparent);
             border-radius:12px;background:color-mix(in srgb,var(--card)98%,transparent);
             max-height:min(calc(98vh - 160px),900px);overflow:auto
+        }
+        .payroll-modal.payroll-flow-modal--wide .payroll-flow-sidebar{
+            flex:0 0 clamp(260px,28vw,340px);
+            align-self:stretch;
+            max-height:none;
+            height:auto;
+            min-height:0;
+            overflow-x:hidden;
+            overflow-y:auto;
+            position:relative;
+            -webkit-overflow-scrolling:touch;
+        }
+        @media (max-width:780px){
+            .payroll-modal.payroll-flow-modal--wide{
+                height:auto;
+                min-height:min(96vh,min(680px,calc(100vh - 20px)));
+                max-height:min(calc(100vh - 16px),98vh);
+                overflow-y:auto;
+                -webkit-overflow-scrolling:touch;
+            }
+            .payroll-modal.payroll-flow-modal--wide .payflow-flow-editor-workspace{
+                flex-direction:column;
+                overflow-y:auto;
+                overflow-x:hidden;
+                -webkit-overflow-scrolling:touch;
+            }
+            .payroll-modal.payroll-flow-modal--wide .payroll-flow-svg-wrap{
+                flex:1 1 auto;
+                min-height:240px;
+                max-height:min(45vh,360px);
+            }
+            .payroll-modal.payroll-flow-modal--wide .payroll-flow-sidebar{
+                flex:0 0 auto;
+                width:100%;
+                max-width:none;
+                max-height:min(38vh,320px);
+            }
         }
         .payroll-flow-sidebar h4{margin:0 0 8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
         .payroll-flow-help{margin:0 0 8px;font-size:10px;line-height:1.35;color:var(--muted)}
@@ -286,18 +384,29 @@
             background:color-mix(in srgb,var(--primary)5%,transparent);
             display:flex;flex-direction:column;gap:8px;
         }
-        .payflow-logic-toolbar-bar{
-            display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-            padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid color-mix(in srgb,var(--border)72%,transparent);
-        }
-        .payflow-logic-toolbar-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
         .payflow-logic-tools__body{display:flex;flex-direction:column;gap:8px}
-        .payflow-logic-block{display:none;flex-wrap:wrap;align-items:center;gap:6px 12px}
+        .payflow-logic-block{display:none;flex-wrap:wrap;align-items:center;gap:6px 12px;position:relative;overflow:visible}
         .payflow-logic-block.is-visible{display:flex}
         .payflow-logic-block--fallback{display:none}
         .payflow-logic-block--stack{width:100%;flex-direction:column;align-items:flex-start;gap:4px;border-left:3px solid color-mix(in srgb,var(--primary)42%,transparent);padding-left:8px}
-        .payflow-logic-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
         .payflow-logic-hint{width:100%;flex-basis:100%;margin:0;font-size:9px;line-height:1.35;color:var(--muted)}
+        /* Tooltip below row so it stays inside overflow boundaries of the modal shell. */
+        .payflow-logic-section-pop{
+            position:absolute;left:0;top:calc(100% + 4px);bottom:auto;display:flex;align-items:flex-start;gap:8px;padding:8px 10px;
+            max-width:min(320px,calc(100vw - 48px));font-size:10px;line-height:1.3;text-align:left;
+            background:color-mix(in srgb,var(--card)97%,transparent);
+            border:1px solid color-mix(in srgb,var(--border)78%,transparent);border-radius:8px;
+            box-shadow:0 6px 20px rgba(0,0,0,.14);
+            color:var(--text);opacity:0;visibility:hidden;transform:translateY(-4px);pointer-events:none;
+            transition:opacity .14s ease,transform .14s ease,visibility .14s ease;z-index:40;
+        }
+        .payflow-logic-section-pop > i.fa{flex-shrink:0;margin-top:1px;font-size:14px;color:color-mix(in srgb,var(--primary)72%,var(--muted))}
+        .payflow-logic-section-pop__title{font-weight:800;display:block;margin:0 0 2px;font-size:10px;color:var(--text)}
+        .payflow-logic-section-pop__desc{margin:0;font-size:9px;font-weight:600;color:var(--muted);line-height:1.35}
+        .payflow-logic-block.is-visible:hover .payflow-logic-section-pop,
+        .payflow-logic-block.is-visible:focus-within .payflow-logic-section-pop{
+            opacity:1;visibility:visible;transform:translateY(0);pointer-events:none;
+        }
         .payflow-logic-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1;min-width:0}
         button.payflow-logic-chip{
             font-family:inherit;font-size:10px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer;
@@ -307,6 +416,44 @@
         button.payflow-logic-chip:hover{background:color-mix(in srgb,var(--primary)14%,transparent);border-color:color-mix(in srgb,var(--primary)42%,var(--border))}
         button.payflow-logic-chip--op{min-width:2rem;text-align:center;font-variant-numeric:tabular-nums}
         button.payflow-logic-chip--snippet{font-weight:650;max-width:100%;text-align:left}
+        .payflow-logic-tools--tabbed{padding:0;border-radius:10px;gap:2px}
+        .payflow-logic-tab-strip{
+            display:flex;flex-wrap:nowrap;align-items:flex-end;gap:4px;margin:0 0 4px;padding:0;
+            border-bottom:1px solid color-mix(in srgb,var(--border)72%,transparent);
+            overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch;
+            white-space:nowrap;
+        }
+        .payflow-logic-tab-strip::-webkit-scrollbar{height:4px}
+        .payflow-logic-tab-strip::-webkit-scrollbar-thumb{border-radius:4px;background:color-mix(in srgb,var(--border)70%,transparent)}
+        .payflow-logic-tab-strip--hidden{display:none!important}
+        button.payflow-logic-tab{
+            font:inherit;font-size:10px;font-weight:700;line-height:1;white-space:nowrap;margin:0 2px -1px 0;
+            padding:6px 10px;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;
+            cursor:pointer;color:color-mix(in srgb,var(--muted)94%,var(--text) 6%);
+            background:color-mix(in srgb,var(--card)40%,transparent);
+            display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;flex-shrink:0;
+            vertical-align:bottom;
+            -webkit-appearance:none;appearance:none;
+        }
+        .payflow-logic-tab .payflow-logic-tab__ico{
+            flex-shrink:0;font-size:12px;line-height:1;width:1em;text-align:center;color:inherit;opacity:.92;
+        }
+        .payflow-logic-tab__lbl{flex-shrink:0;line-height:1.15}
+        button.payflow-logic-tab:hover{
+            background:color-mix(in srgb,var(--primary)14%,transparent);
+            color:var(--text);
+        }
+        button.payflow-logic-tab--active{
+            color:color-mix(in srgb,var(--primary)76%,var(--text));
+            background:color-mix(in srgb,var(--card)94%,transparent);
+            border-color:color-mix(in srgb,var(--border)74%,transparent);
+            border-bottom-color:transparent;margin-bottom:-1px;padding-bottom:7px;
+        }
+        button.payflow-logic-tab:focus-visible{outline:2px solid color-mix(in srgb,var(--primary)45%,transparent);outline-offset:1px}
+        .payflow-logic-tools__body--tabbed{display:block}
+        .payflow-logic-tabpanel{display:none;margin:0;padding:0;border:none;background:transparent;overflow:visible}
+        .payflow-logic-tabpanel--active{display:block;overflow:visible}
+        #payflowLogicTools{overflow:visible}
         .payflow-formula-chrome{width:100%;flex-basis:100%;margin-bottom:8px;padding:10px;border:1px solid color-mix(in srgb,var(--border)76%,transparent);
             border-radius:12px;background:color-mix(in srgb,var(--primary)5%,transparent)}
         .payflow-graph-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
@@ -571,7 +718,8 @@
                         <button type="button" id="payrollRuleFlowDesignerBtn" class="payroll-btn" style="width:100%;justify-content:center;">
                             <i class="fa fa-diagram-project"></i>{{ __('Open flow designer (uses calculation mode above)') }}
                         </button>
-                        <small class="payroll-rule-help">{{ __('For Formula mode you can build conditions and math as a graph; config JSON updates when you apply from the designer.') }}</small>
+                        <small id="payrollRuleFlowDesignerHelpDefault" class="payroll-rule-help">{{ __('For non-formula modes you can draft the flow here; config JSON updates when you apply from the designer.') }}</small>
+                        <small id="payrollRuleFlowDesignerHelpFormula" class="payroll-rule-help" hidden style="color:color-mix(in srgb,var(--primary)55%,var(--muted));font-weight:650;">{{ __('Formula: save this rule first. After it appears in the list, open the flow editor from that rule to build the graph.') }}</small>
                     </div>
                 </div>
                 </div>
@@ -616,61 +764,117 @@
                     <button type="button" id="payflowModalClose" class="payroll-modal__close" aria-label="{{ __('Close') }}">×</button>
                 </div>
 
-                <div id="payflowLogicTools" class="payflow-logic-tools" hidden>
-                    <div class="payflow-logic-toolbar-bar">
-                        <span class="payflow-logic-toolbar-label">{{ __('Logic tools') }}</span>
+                <div id="payflowLogicTools" class="payflow-logic-tools payflow-logic-tools--tabbed" hidden role="toolbar" aria-label="{{ __('Logic tools') }}">
+                    <div id="payflowLogicTabStrip" class="payflow-logic-tab-strip payflow-logic-tab-strip--hidden" role="tablist">
+                        <button type="button" id="payflowLogicTabPrimary" class="payflow-logic-tab payflow-logic-tab--active" role="tab" tabindex="0" aria-selected="true" aria-controls="payflowLogicTabPanelPrimary" data-logic-tab="primary">
+                            <i id="payflowLogicTabPrimaryIcon" class="fa fa-th-list payflow-logic-tab__ico" aria-hidden="true"></i><span id="payflowLogicTabPrimaryLbl" class="payflow-logic-tab__lbl">{{ __('Fields') }}</span>
+                        </button>
+                        <button type="button" id="payflowLogicTabSecondary" class="payflow-logic-tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="payflowLogicTabPanelSecondary" data-logic-tab="secondary">
+                            <i id="payflowLogicTabSecondaryIcon" class="fa fa-code payflow-logic-tab__ico" aria-hidden="true"></i><span id="payflowLogicTabSecondaryLbl" class="payflow-logic-tab__lbl">{{ __('Formula & examples') }}</span>
+                        </button>
                     </div>
-                    <div class="payflow-logic-tools__body">
-                        <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="fixed">
-                            <span class="payflow-logic-group">{{ __('Fixed') }}</span>
-                            <p class="payflow-logic-hint">{{ __('Enter amount on the Amount node. Use Formula / % / Slab modes for payroll fields.') }}</p>
-                        </div>
+                    <div class="payflow-logic-tools__body payflow-logic-tools__body--tabbed">
+                        <div id="payflowLogicTabPanelPrimary" class="payflow-logic-tabpanel payflow-logic-tabpanel--active" role="tabpanel" aria-labelledby="payflowLogicTabPrimary">
+                            <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="fixed" aria-label="{{ __('Fixed') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-thumbtack" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Fixed') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Enter amount on the Amount node; other modes use payroll fields.') }}</p>
+                                    </div>
+                                </div>
+                                <p class="payflow-logic-hint">{{ __('Enter amount on the Amount node. Use Formula / % / Slab modes for payroll fields.') }}</p>
+                            </div>
 
-                        <div class="payflow-logic-block" data-show-for="percentage slab formula">
-                            <span class="payflow-logic-group">{{ __('Fields') }}</span>
-                            <div class="payflow-logic-chips" title="{{ __('Insert at cursor / base / input fields') }}">
-                                @foreach($payflowContextFields as [$pfKey, $pfHint])
-                                    <button type="button" class="payflow-logic-chip" title="{{ $pfHint }}" data-payflow-insert="{{ $pfKey }}">{{ $pfKey }}</button>
-                                @endforeach
+                            <div class="payflow-logic-block" data-show-for="percentage slab formula" aria-label="{{ __('Fields') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-file-lines" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Fields') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Insert at cursor / base / input fields') }}</p>
+                                    </div>
+                                </div>
+                                <div class="payflow-logic-chips">
+                                    @foreach($payflowContextFields as [$pfKey, $pfHint])
+                                        <button type="button" class="payflow-logic-chip" title="{{ $pfHint }}" data-payflow-insert="{{ $pfKey }}">{{ $pfKey }}</button>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="payflow-logic-block payflow-logic-block--stack payflow-logic-block--fallback" aria-label="{{ __('Reference') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-question-circle" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Reference') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Choose a calculation mode in rule settings.') }}</p>
+                                    </div>
+                                </div>
+                                <p class="payflow-logic-hint">{{ __('Use Formula for math on context keys, or pick Fixed / Percentage / Slab in rule settings.') }}</p>
                             </div>
                         </div>
-
-                        <div class="payflow-logic-block" data-show-for="formula">
-                            <span class="payflow-logic-group">{{ __('Ops') }}</span>
-                            <div class="payflow-logic-chips" aria-label="{{ __('Operators') }}">
-                                @foreach(['+', '-', '*', '/', '(', ')'] as $pfOp)
-                                    <button type="button" class="payflow-logic-chip payflow-logic-chip--op" data-payflow-insert="{{ $pfOp }}">{{ $pfOp }}</button>
-                                @endforeach
+                        <div id="payflowLogicTabPanelSecondary" class="payflow-logic-tabpanel" role="tabpanel" aria-labelledby="payflowLogicTabSecondary">
+                            <div class="payflow-logic-block" data-show-for="formula" aria-label="{{ __('Operators') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-calculator" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Ops') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Insert operators and parentheses at the cursor.') }}</p>
+                                    </div>
+                                </div>
+                                <div class="payflow-logic-chips">
+                                    @foreach(['+', '-', '*', '/', '(', ')'] as $pfOp)
+                                        <button type="button" class="payflow-logic-chip payflow-logic-chip--op" data-payflow-insert="{{ $pfOp }}">{{ $pfOp }}</button>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="formula">
-                            <span class="payflow-logic-group">{{ __('Graph') }}</span>
-                            <p class="payflow-logic-hint">{{ __('Compare → 0/1, If / else picks branch. Set Output to the graph result node.') }}</p>
-                        </div>
-
-                        <div class="payflow-logic-block" data-show-for="formula">
-                            <span class="payflow-logic-group">{{ __('Examples') }}</span>
-                            <div class="payflow-logic-chips">
-                                @foreach($payflowFormulaSnippets as [$pfSnip, $pfLabel])
-                                    <button type="button" class="payflow-logic-chip payflow-logic-chip--snippet" data-payflow-insert="{{ $pfSnip }}" title="{{ $pfLabel }}">{{ $pfLabel }}</button>
-                                @endforeach
+                            <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="formula" aria-label="{{ __('Graph') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-sitemap" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Graph') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Compare, If/else branches, and output node.') }}</p>
+                                    </div>
+                                </div>
+                                <p class="payflow-logic-hint">{{ __('Compare → 0/1, If / else picks branch. Set Output to the graph result node.') }}</p>
                             </div>
-                        </div>
 
-                        <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="percentage">
-                            <span class="payflow-logic-group">{{ __('%') }}</span>
-                            <p class="payflow-logic-hint">{{ __('Percent uses the Base field vs payroll context.') }}</p>
-                        </div>
+                            <div class="payflow-logic-block" data-show-for="formula" aria-label="{{ __('Examples') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-lightbulb" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Examples') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Sample expressions you can insert and edit.') }}</p>
+                                    </div>
+                                </div>
+                                <div class="payflow-logic-chips">
+                                    @foreach($payflowFormulaSnippets as [$pfSnip, $pfLabel])
+                                        <button type="button" class="payflow-logic-chip payflow-logic-chip--snippet" data-payflow-insert="{{ $pfSnip }}" title="{{ $pfLabel }}">{{ $pfLabel }}</button>
+                                    @endforeach
+                                </div>
+                            </div>
 
-                        <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="slab">
-                            <span class="payflow-logic-group">{{ __('Slabs') }}</span>
-                            <p class="payflow-logic-hint">{{ __('Bands by From; optional To; percent + optional fixed add-on per band.') }}</p>
-                        </div>
+                            <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="percentage" aria-label="{{ __('Percentage') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-percent" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Percentage') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Base field vs payroll context.') }}</p>
+                                    </div>
+                                </div>
+                                <p class="payflow-logic-hint">{{ __('Percent uses the Base field vs payroll context.') }}</p>
+                            </div>
 
-                        <div class="payflow-logic-block payflow-logic-block--stack payflow-logic-block--fallback">
-                            <span class="payflow-logic-group">{{ __('Reference') }}</span>
-                            <p class="payflow-logic-hint">{{ __('Use Formula for math on context keys, or pick Fixed / Percentage / Slab in rule settings.') }}</p>
+                            <div class="payflow-logic-block payflow-logic-block--stack" data-show-for="slab" aria-label="{{ __('Slabs') }}">
+                                <div class="payflow-logic-section-pop" aria-hidden="true">
+                                    <i class="fa fa-bars" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="payflow-logic-section-pop__title">{{ __('Slabs') }}</span>
+                                        <p class="payflow-logic-section-pop__desc">{{ __('Tiered bands with percent and optional fixed add-on.') }}</p>
+                                    </div>
+                                </div>
+                                <p class="payflow-logic-hint">{{ __('Bands by From; optional To; percent + optional fixed add-on per band.') }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -698,23 +902,25 @@
                             <span class="payroll-flow-help" style="margin:0;">{{ __('The graph result is this node. Comparisons output 1 (true) or 0 (false); “If / else” uses that test.') }}</span>
                         </div>
                     </div>
-                    <div class="payroll-flow-svg-wrap">
-                        <p id="payflowLoadError" class="payflow-load-error" style="display:none;" role="alert"></p>
-                        <svg id="payflowSvg" role="img" aria-label="{{ __('Flow diagram') }}"></svg>
-                    </div>
-                    <aside class="payroll-flow-sidebar">
-                        <h4>{{ __('Selection') }}</h4>
-                        <div id="payflowSidebarPlaceholder" class="payroll-flow-help">{{ __('Click a node in the diagram to edit its settings.') }}</div>
-                        <div id="payflowSidebarBody" style="display:none;"></div>
-                        <div id="payflowSlabToolbar" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--border)76%,transparent);">
-                            <button type="button" class="payroll-btn" id="payflowAddSlabBtn" style="width:100%;justify-content:center;">
-                                <i class="fa fa-plus"></i>{{ __('Add slab band') }}
-                            </button>
-                            <button type="button" class="payroll-btn payroll-modal__btn-secondary" id="payflowRemoveSlabBtn" style="width:100%;justify-content:center;margin-top:6px;">
-                                <i class="fa fa-minus"></i>{{ __('Remove selected slab') }}
-                            </button>
+                    <div class="payflow-flow-editor-workspace">
+                        <div class="payroll-flow-svg-wrap">
+                            <p id="payflowLoadError" class="payflow-load-error" style="display:none;" role="alert"></p>
+                            <svg id="payflowSvg" role="img" aria-label="{{ __('Flow diagram') }}"></svg>
                         </div>
-                    </aside>
+                        <aside class="payroll-flow-sidebar">
+                            <h4>{{ __('Selection') }}</h4>
+                            <div id="payflowSidebarPlaceholder" class="payroll-flow-help">{{ __('Click a node in the diagram to edit its settings.') }}</div>
+                            <div id="payflowSidebarBody" style="display:none;"></div>
+                            <div id="payflowSlabToolbar" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--border)76%,transparent);">
+                                <button type="button" class="payroll-btn" id="payflowAddSlabBtn" style="width:100%;justify-content:center;">
+                                    <i class="fa fa-plus"></i>{{ __('Add slab band') }}
+                                </button>
+                                <button type="button" class="payroll-btn payroll-modal__btn-secondary" id="payflowRemoveSlabBtn" style="width:100%;justify-content:center;margin-top:6px;">
+                                    <i class="fa fa-minus"></i>{{ __('Remove selected slab') }}
+                                </button>
+                            </div>
+                        </aside>
+                    </div>
                 </div>
 
                 <div class="payroll-modal__actions">
@@ -748,6 +954,22 @@
             const flowAddSlabBtn = document.getElementById('payflowAddSlabBtn');
             const flowRemoveSlabBtn = document.getElementById('payflowRemoveSlabBtn');
             const flowLogicToolsRoot = document.getElementById('payflowLogicTools');
+            const payflowLogicTabStrip = document.getElementById('payflowLogicTabStrip');
+            const payflowLogicTabPrimary = document.getElementById('payflowLogicTabPrimary');
+            const payflowLogicTabSecondary = document.getElementById('payflowLogicTabSecondary');
+            const payflowLogicPanelPrimary = document.getElementById('payflowLogicTabPanelPrimary');
+            const payflowLogicPanelSecondary = document.getElementById('payflowLogicTabPanelSecondary');
+            const PAYFLOW_LOGIC_UI = {
+                primaryKeys: {!! json_encode(__('Fields')) !!},
+                primaryGuide: {!! json_encode(__('Guide')) !!},
+                secondaryFormula: {!! json_encode(__('Formula & examples')) !!},
+                secondaryPercentage: {!! json_encode(__('Percentage')) !!},
+                secondarySlab: {!! json_encode(__('Slabs')) !!},
+            };
+            const payflowLogicTabPrimaryLbl = document.getElementById('payflowLogicTabPrimaryLbl');
+            const payflowLogicTabPrimaryIcon = document.getElementById('payflowLogicTabPrimaryIcon');
+            const payflowLogicTabSecondaryLbl = document.getElementById('payflowLogicTabSecondaryLbl');
+            const payflowLogicTabSecondaryIcon = document.getElementById('payflowLogicTabSecondaryIcon');
             const payflowFormulaChrome = document.getElementById('payflowFormulaChrome');
             const payflowFormulaRootSel = document.getElementById('payflowFormulaRoot');
             const payflowApplyDraftBtn = document.getElementById('payflowApplyDraftBtn');
@@ -764,6 +986,49 @@
             const NODE_W = 168;
             const NODE_H = 44;
 
+            function setLogicToolTab(which) {
+                if (!payflowLogicTabPrimary || !payflowLogicTabSecondary || !payflowLogicPanelPrimary || !payflowLogicPanelSecondary) return;
+                var isPri = which === 'primary';
+                payflowLogicTabPrimary.classList.toggle('payflow-logic-tab--active', isPri);
+                payflowLogicTabSecondary.classList.toggle('payflow-logic-tab--active', !isPri);
+                payflowLogicTabPrimary.setAttribute('aria-selected', isPri ? 'true' : 'false');
+                payflowLogicTabSecondary.setAttribute('aria-selected', (!isPri) ? 'true' : 'false');
+                payflowLogicTabPrimary.tabIndex = isPri ? 0 : -1;
+                payflowLogicTabSecondary.tabIndex = (!isPri) ? 0 : -1;
+                payflowLogicPanelPrimary.classList.toggle('payflow-logic-tabpanel--active', isPri);
+                payflowLogicPanelSecondary.classList.toggle('payflow-logic-tabpanel--active', !isPri);
+            }
+
+            function refreshLogicToolTabs(mode, matched) {
+                if (!payflowLogicTabStrip || !payflowLogicTabPrimary || !payflowLogicTabSecondary || !payflowLogicPanelSecondary) return;
+                var nSecondary = payflowLogicPanelSecondary.querySelectorAll('.payflow-logic-block.is-visible').length;
+                var showSecondaryStrip = matched > 0 && nSecondary > 0;
+                if (payflowLogicTabPrimaryLbl) {
+                    payflowLogicTabPrimaryLbl.textContent = mode === 'fixed' ? PAYFLOW_LOGIC_UI.primaryGuide : PAYFLOW_LOGIC_UI.primaryKeys;
+                }
+                if (payflowLogicTabPrimaryIcon) {
+                    payflowLogicTabPrimaryIcon.className = 'fa ' + (mode === 'fixed' ? 'fa-info-circle' : 'fa-th-list') + ' payflow-logic-tab__ico';
+                }
+                if (payflowLogicTabSecondaryLbl) {
+                    payflowLogicTabSecondaryLbl.textContent = mode === 'formula'
+                        ? PAYFLOW_LOGIC_UI.secondaryFormula
+                        : (mode === 'percentage' ? PAYFLOW_LOGIC_UI.secondaryPercentage : PAYFLOW_LOGIC_UI.secondarySlab);
+                }
+                if (payflowLogicTabSecondaryIcon) {
+                    var secIc = mode === 'formula' ? 'fa-code' : (mode === 'percentage' ? 'fa-percent' : 'fa-bars');
+                    payflowLogicTabSecondaryIcon.className = 'fa ' + secIc + ' payflow-logic-tab__ico';
+                }
+                if (mode === 'fixed' || !showSecondaryStrip) {
+                    payflowLogicTabStrip.classList.add('payflow-logic-tab-strip--hidden');
+                    payflowLogicTabSecondary.hidden = true;
+                    setLogicToolTab('primary');
+                } else {
+                    payflowLogicTabStrip.classList.remove('payflow-logic-tab-strip--hidden');
+                    payflowLogicTabSecondary.hidden = false;
+                    setLogicToolTab('primary');
+                }
+            }
+
             function updateLogicTools(mode) {
                 if (!flowLogicToolsRoot) return;
                 var matched = 0;
@@ -775,6 +1040,7 @@
                 });
                 var fb = flowLogicToolsRoot.querySelector('.payflow-logic-block--fallback');
                 if (fb) fb.classList.toggle('is-visible', matched === 0);
+                refreshLogicToolTabs(mode, matched);
             }
 
             function insertAtCursor(el, text) {
@@ -837,6 +1103,13 @@
 
             if (flowLogicToolsRoot) {
                 flowLogicToolsRoot.addEventListener('click', function (ev) {
+                    var lt = ev.target.closest('button.payflow-logic-tab[data-logic-tab]');
+                    if (lt && flowLogicToolsRoot.contains(lt)) {
+                        var which = lt.getAttribute('data-logic-tab');
+                        if (which === 'primary' || which === 'secondary') setLogicToolTab(which);
+                        ev.preventDefault();
+                        return;
+                    }
                     var btn = ev.target.closest('button[data-payflow-insert]');
                     if (!btn || !flowLogicToolsRoot.contains(btn)) return;
                     ev.preventDefault();
@@ -1125,8 +1398,10 @@
                 }
                 if (flowSidebarPh) flowSidebarPh.style.display = 'block';
 
-                const width = flowSvg.clientWidth || 600;
-                const height = flowSvg.clientHeight || 380;
+                var svgWrap = flowSvg.closest('.payroll-flow-svg-wrap');
+                var width = flowSvg.clientWidth || (svgWrap && svgWrap.clientWidth) || 600;
+                var height = flowSvg.clientHeight || (svgWrap && svgWrap.clientHeight) || 0;
+                if (height < 120) height = Math.max(280, Math.floor((window.innerHeight || 600) * 0.35));
 
                 const root = d3.select(flowSvg);
                 const gMain = root.append('g').attr('class', 'payflow-zoom-layer');
@@ -1489,7 +1764,9 @@
                 }
                 setFlowError('');
                 syncFormulaChrome();
-                requestAnimationFrame(renderFlow);
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(renderFlow);
+                });
             }
 
             function openFlowEditor(btn) {
@@ -1511,6 +1788,10 @@
                 if (!payrollRuleModalForm) return;
                 var modeEl = payrollRuleModalForm.querySelector('[name="calculation_mode"]');
                 var mode = modeEl ? modeEl.value : 'fixed';
+                if (String(mode).toLowerCase() === 'formula') {
+                    alert({!! json_encode(__('Save this rule first, then open the flow editor from the rule list.')) !!});
+                    return;
+                }
                 var raw = '';
                 var cj = payrollRuleModalForm.querySelector('[name="config_json"]');
                 if (cj) raw = cj.value || '';
@@ -1646,6 +1927,17 @@
                 flowState.graph = buildGraph(flowState.mode, flowState.config);
                 renderFlow();
             });
+
+            var flowSvgWrapEl = flowSvg ? flowSvg.closest('.payroll-flow-svg-wrap') : null;
+            var payflowSvgResizeTimer = null;
+            if (flowSvgWrapEl && typeof ResizeObserver !== 'undefined') {
+                var payflowSvgRo = new ResizeObserver(function () {
+                    if (!flowOverlay || !flowOverlay.classList.contains('is-open') || !flowState) return;
+                    clearTimeout(payflowSvgResizeTimer);
+                    payflowSvgResizeTimer = setTimeout(function () { renderFlow(); }, 70);
+                });
+                payflowSvgRo.observe(flowSvgWrapEl);
+            }
         })();
     </script>
     <script>
@@ -1660,6 +1952,19 @@
             const ruleSetCloseBtn = document.getElementById('payrollRuleSetModalClose');
             const ruleSetCancelBtn = document.getElementById('payrollRuleSetModalCancel');
 
+            const payrollRuleFlowDesignerBtn = document.getElementById('payrollRuleFlowDesignerBtn');
+            const payrollRuleCalcModeEl = form ? form.querySelector('[name="calculation_mode"]') : null;
+            const payrollRuleFlowHelpDefault = document.getElementById('payrollRuleFlowDesignerHelpDefault');
+            const payrollRuleFlowHelpFormula = document.getElementById('payrollRuleFlowDesignerHelpFormula');
+
+            function syncPayrollRuleFlowDesignerGate() {
+                if (!payrollRuleFlowDesignerBtn || !payrollRuleCalcModeEl) return;
+                var isFormula = String(payrollRuleCalcModeEl.value || '').toLowerCase() === 'formula';
+                payrollRuleFlowDesignerBtn.disabled = isFormula;
+                if (payrollRuleFlowHelpDefault) payrollRuleFlowHelpDefault.hidden = isFormula;
+                if (payrollRuleFlowHelpFormula) payrollRuleFlowHelpFormula.hidden = !isFormula;
+            }
+
             function openModalFromButton(btn) {
                 if (!overlay || !form || !ruleSetIdInput || !btn) return;
                 const actionUrl = btn.getAttribute('data-action-url') || '';
@@ -1667,6 +1972,7 @@
                 form.action = actionUrl;
                 ruleSetIdInput.value = ruleSetId;
                 overlay.classList.add('is-open');
+                syncPayrollRuleFlowDesignerGate();
             }
 
             function closeModal() {
@@ -1683,6 +1989,8 @@
                 if (!ruleSetOverlay) return;
                 ruleSetOverlay.classList.remove('is-open');
             }
+
+            payrollRuleCalcModeEl && payrollRuleCalcModeEl.addEventListener('change', syncPayrollRuleFlowDesignerGate);
 
             document.querySelectorAll('.payroll-add-rule-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
