@@ -3,7 +3,10 @@
 namespace Modules\AIBot\Services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Modules\Account\Models\Account;
+use Modules\Account\Models\Bill;
 use Modules\Account\Services\BillService;
 use Modules\Account\Services\LoanOverviewTooltipService;
 use Modules\Account\Services\LoanService;
@@ -39,6 +42,8 @@ readonly class SociBizAgentToolExecutor
                 'soci_biz_list_departments' => $this->listDepartments($user, $business),
                 'soci_biz_list_job_titles' => $this->listJobTitles($user, $business),
                 'soci_biz_list_branches' => $this->listBranches($user, $business),
+                'soci_biz_prepare_bill_draft' => $this->prepareBillDraft($user, $business, $args),
+                'soci_biz_confirm_bill_insert' => $this->confirmBillInsert($user, $business, $args),
                 default => ['error' => 'Unknown tool: '.$name],
             };
         } catch (\Throwable $e) {
@@ -110,6 +115,65 @@ readonly class SociBizAgentToolExecutor
                 'name' => 'soci_biz_list_branches',
                 'description' => 'Branches / warehouses when multi-location mode is enabled for the business.',
                 'parameters' => ['type' => 'object', 'properties' => (object) [], 'required' => []],
+            ],
+            [
+                'name' => 'soci_biz_prepare_bill_draft',
+                'description' => 'Creates/updates a draft bill payload from user-provided details and returns missing required fields. Use before confirmation.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'draft_id' => ['type' => 'string', 'description' => 'Optional existing draft id to continue updating same draft'],
+                        'name' => ['type' => 'string'],
+                        'payment_mode' => ['type' => 'string', 'description' => 'recurring or one_time'],
+                        'bill_category' => ['type' => 'string', 'description' => 'water, electricity, telephone, internet, gas, waste, other'],
+                        'bill_category_other' => ['type' => 'string'],
+                        'recurring_cost' => ['type' => 'number'],
+                        'recurring_type' => ['type' => 'string', 'description' => 'per_day, per_month, per_year'],
+                        'agreement_valid_until_year' => ['type' => 'integer'],
+                        'due_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'first_installment_due_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'description' => ['type' => 'string'],
+                        'notes' => ['type' => 'string'],
+                        'deduct_account_id' => ['type' => 'integer'],
+                        'deduct_account_number' => ['type' => 'string', 'description' => 'Bank account number of deduct account (alternative to deduct_account_id)'],
+                        'account_number' => ['type' => 'string'],
+                        'account_no' => ['type' => 'string'],
+                        'amount_varies_by_usage' => ['type' => 'boolean'],
+                        'allow_split_payment' => ['type' => 'boolean'],
+                        'remind_before_days' => ['type' => 'integer'],
+                    ],
+                    'required' => [],
+                ],
+            ],
+            [
+                'name' => 'soci_biz_confirm_bill_insert',
+                'description' => 'Inserts the prepared draft bill after explicit user confirmation.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'draft_id' => ['type' => 'string'],
+                        'confirm' => ['type' => 'boolean'],
+                        'name' => ['type' => 'string'],
+                        'payment_mode' => ['type' => 'string'],
+                        'bill_category' => ['type' => 'string'],
+                        'bill_category_other' => ['type' => 'string'],
+                        'recurring_cost' => ['type' => 'number'],
+                        'recurring_type' => ['type' => 'string'],
+                        'agreement_valid_until_year' => ['type' => 'integer'],
+                        'due_date' => ['type' => 'string'],
+                        'first_installment_due_date' => ['type' => 'string'],
+                        'description' => ['type' => 'string'],
+                        'notes' => ['type' => 'string'],
+                        'deduct_account_id' => ['type' => 'integer'],
+                        'deduct_account_number' => ['type' => 'string'],
+                        'account_number' => ['type' => 'string'],
+                        'account_no' => ['type' => 'string'],
+                        'amount_varies_by_usage' => ['type' => 'boolean'],
+                        'allow_split_payment' => ['type' => 'boolean'],
+                        'remind_before_days' => ['type' => 'integer'],
+                    ],
+                    'required' => ['draft_id', 'confirm'],
+                ],
             ],
         ];
     }
@@ -382,6 +446,325 @@ readonly class SociBizAgentToolExecutor
         return [
             'branches' => $rows->map(fn ($b) => ['id' => $b->id, 'name' => $b->name])->all(),
         ];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function prepareBillDraft(User $user, ?Business $business, array $args): array
+    {
+        if (! $this->ownsBusiness($user, $business)) {
+            return $this->needBusiness();
+        }
+
+        $incomingDraftId = trim((string) ($args['draft_id'] ?? ''));
+        $draftId = $incomingDraftId !== '' ? $incomingDraftId : $this->latestBillDraftId($user, $business);
+        $baseDraft = $draftId !== null ? $this->getBillDraft($user, $business, $draftId) : null;
+        $patch = $this->normalizeBillDraftArgs($user, $business, $args);
+        $draft = is_array($baseDraft) ? $this->mergeBillDraft($baseDraft, $patch) : $patch;
+        $missing = $this->missingRequiredBillFields($draft);
+        $draftId = $this->storeBillDraft($user, $business, $draft, $draftId);
+
+        return [
+            'draft_id' => $draftId,
+            'ready_to_confirm' => $missing === [],
+            'missing_fields' => $missing,
+            'allowed_values' => [
+                'payment_mode' => array_keys(Bill::paymentModes()),
+                'bill_category' => array_keys(Bill::billCategories()),
+                'recurring_type' => array_keys(Bill::recurringTypes()),
+            ],
+            'draft' => $draft,
+            'message' => $missing === []
+                ? 'Draft prepared. Ask user to confirm insertion, then call soci_biz_confirm_bill_insert.'
+                : 'Draft saved. Ask user for missing fields.',
+        ];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function confirmBillInsert(User $user, ?Business $business, array $args): array
+    {
+        if (! $this->ownsBusiness($user, $business)) {
+            return $this->needBusiness();
+        }
+
+        $draftId = trim((string) ($args['draft_id'] ?? ''));
+        $confirm = (bool) ($args['confirm'] ?? false);
+        if ($draftId === '') {
+            $draftId = $this->latestBillDraftId($user, $business) ?? '';
+        }
+        if ($draftId === '') {
+            return ['error' => 'No draft found. Please prepare draft first.'];
+        }
+        if (! $confirm) {
+            return ['status' => 'cancelled', 'message' => 'Insert cancelled because confirm=false.'];
+        }
+
+        $draft = $this->getBillDraft($user, $business, $draftId);
+        if (! is_array($draft)) {
+            $fallbackDraft = $this->normalizeBillDraftArgs($user, $business, $args);
+            $fallbackMissing = $this->missingRequiredBillFields($fallbackDraft);
+            if ($fallbackMissing !== []) {
+                return [
+                    'error' => 'Draft not found or expired.',
+                    'message' => 'Draft expired. Please provide missing fields or ask to prepare draft again.',
+                    'missing_fields' => $fallbackMissing,
+                ];
+            }
+            $draft = $fallbackDraft;
+        }
+
+        $missing = $this->missingRequiredBillFields($draft);
+        if ($missing !== []) {
+            return ['error' => 'Draft is incomplete.', 'missing_fields' => $missing, 'draft' => $draft];
+        }
+
+        $bill = $this->billService->create($user, $business, $draft);
+        Cache::forget($this->billDraftCacheKey($user, $business, $draftId));
+        Cache::forget($this->latestBillDraftKey($user, $business));
+
+        return [
+            'status' => 'inserted',
+            'bill' => [
+                'id' => $bill->id,
+                'name' => $bill->name,
+                'payment_mode' => $bill->payment_mode,
+                'bill_category' => $bill->bill_category,
+                'recurring_cost' => (string) $bill->recurring_cost,
+            ],
+            'message' => 'Bill inserted successfully.',
+        ];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function normalizeBillDraftArgs(User $user, Business $business, array $args): array
+    {
+        $paymentMode = (string) ($args['payment_mode'] ?? Bill::PAYMENT_MODE_RECURRING);
+        if (! in_array($paymentMode, array_keys(Bill::paymentModes()), true)) {
+            $paymentMode = Bill::PAYMENT_MODE_RECURRING;
+        }
+
+        $category = (string) ($args['bill_category'] ?? Bill::CATEGORY_OTHER);
+        if (! in_array($category, array_keys(Bill::billCategories()), true)) {
+            $category = Bill::CATEGORY_OTHER;
+        }
+
+        $recurringType = (string) ($args['recurring_type'] ?? Bill::RECURRING_PER_MONTH);
+        if (! in_array($recurringType, array_keys(Bill::recurringTypes()), true)) {
+            $recurringType = Bill::RECURRING_PER_MONTH;
+        }
+
+        $dueDate = $this->normalizeDateYmd($args['due_date'] ?? null);
+        $firstInstallment = $this->normalizeDateYmd($args['first_installment_due_date'] ?? null);
+        $agreementYear = isset($args['agreement_valid_until_year']) ? (int) $args['agreement_valid_until_year'] : null;
+        if ($paymentMode === Bill::PAYMENT_MODE_ONE_TIME && $agreementYear === null) {
+            $anchor = $dueDate ?: $firstInstallment;
+            if ($anchor !== null) {
+                $agreementYear = (int) substr($anchor, 0, 4);
+            }
+        }
+
+        $resolvedAccountId = $this->resolveDeductAccountId($user, $business, $args);
+
+        return [
+            'name' => trim((string) ($args['name'] ?? '')),
+            'payment_mode' => $paymentMode,
+            'bill_category' => $category,
+            'bill_category_other' => $category === Bill::CATEGORY_OTHER ? trim((string) ($args['bill_category_other'] ?? '')) : null,
+            'description' => $this->nullableTrimmed($args['description'] ?? null),
+            'agreement_valid_until_year' => $agreementYear,
+            'branch_id' => null,
+            'department_id' => null,
+            'rental_property_related' => false,
+            'rental_id' => null,
+            'deduct_account_id' => $resolvedAccountId,
+            'amount_varies_by_usage' => (bool) ($args['amount_varies_by_usage'] ?? false),
+            'allow_split_payment' => (bool) ($args['allow_split_payment'] ?? true),
+            'recurring_cost' => round((float) ($args['recurring_cost'] ?? 0), 2),
+            'recurring_type' => $recurringType,
+            'notes' => $this->nullableTrimmed($args['notes'] ?? null),
+            'remind_before_days' => isset($args['remind_before_days']) ? max(0, (int) $args['remind_before_days']) : null,
+            'due_date' => $dueDate,
+            'first_installment_due_date' => $firstInstallment,
+        ];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function resolveDeductAccountId(User $user, Business $business, array $args): ?int
+    {
+        $rawId = $args['deduct_account_id'] ?? null;
+        if (is_int($rawId) || (is_string($rawId) && ctype_digit(trim($rawId)))) {
+            $id = (int) $rawId;
+            if ($id > 0) {
+                $exists = Account::query()
+                    ->where('id', $id)
+                    ->where('user_id', $user->id)
+                    ->where('business_id', $business->id)
+                    ->exists();
+                if ($exists) {
+                    return $id;
+                }
+            }
+        }
+
+        $candidates = [
+            $args['deduct_account_number'] ?? null,
+            $args['account_number'] ?? null,
+            $args['account_no'] ?? null,
+        ];
+        if (is_string($rawId) && trim($rawId) !== '' && ! ctype_digit(trim($rawId))) {
+            $candidates[] = $rawId;
+        }
+
+        foreach ($candidates as $candidate) {
+            $accountNumber = trim((string) ($candidate ?? ''));
+            if ($accountNumber === '') {
+                continue;
+            }
+
+            $resolved = Account::query()
+                ->where('user_id', $user->id)
+                ->where('business_id', $business->id)
+                ->where('bank_account_number', $accountNumber)
+                ->value('id');
+
+            if ($resolved !== null) {
+                return (int) $resolved;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param  array<string, mixed>  $draft */
+    private function missingRequiredBillFields(array $draft): array
+    {
+        $missing = [];
+        if (trim((string) ($draft['name'] ?? '')) === '') {
+            $missing[] = 'name';
+        }
+
+        $mode = (string) ($draft['payment_mode'] ?? '');
+        if ($mode === '') {
+            $missing[] = 'payment_mode';
+        }
+
+        $category = (string) ($draft['bill_category'] ?? '');
+        if ($category === '') {
+            $missing[] = 'bill_category';
+        }
+        if ($category === Bill::CATEGORY_OTHER && trim((string) ($draft['bill_category_other'] ?? '')) === '') {
+            $missing[] = 'bill_category_other';
+        }
+
+        $amountVaries = (bool) ($draft['amount_varies_by_usage'] ?? false);
+        if (! $amountVaries && (float) ($draft['recurring_cost'] ?? 0) <= 0) {
+            $missing[] = 'recurring_cost';
+        }
+
+        if ($mode === Bill::PAYMENT_MODE_RECURRING) {
+            if ((int) ($draft['agreement_valid_until_year'] ?? 0) <= 0) {
+                $missing[] = 'agreement_valid_until_year';
+            }
+            if (trim((string) ($draft['recurring_type'] ?? '')) === '') {
+                $missing[] = 'recurring_type';
+            }
+        }
+        if ($mode === Bill::PAYMENT_MODE_ONE_TIME
+            && trim((string) ($draft['due_date'] ?? '')) === ''
+            && trim((string) ($draft['first_installment_due_date'] ?? '')) === '') {
+            $missing[] = 'due_date_or_first_installment_due_date';
+        }
+
+        return array_values(array_unique($missing));
+    }
+
+    /** @param  array<string, mixed>  $draft */
+    private function storeBillDraft(User $user, Business $business, array $draft, ?string $draftId = null): string
+    {
+        $draftId = $draftId !== null && $draftId !== '' ? $draftId : (string) Str::uuid();
+        Cache::put($this->billDraftCacheKey($user, $business, $draftId), $draft, now()->addHours(12));
+        Cache::put($this->latestBillDraftKey($user, $business), $draftId, now()->addHours(12));
+
+        return $draftId;
+    }
+
+    private function billDraftCacheKey(User $user, Business $business, string $draftId): string
+    {
+        return 'aibot:bill_draft:'.$user->id.':'.$business->id.':'.$draftId;
+    }
+
+    private function latestBillDraftKey(User $user, Business $business): string
+    {
+        return 'aibot:bill_draft_latest:'.$user->id.':'.$business->id;
+    }
+
+    private function latestBillDraftId(User $user, Business $business): ?string
+    {
+        $id = Cache::get($this->latestBillDraftKey($user, $business));
+        if (! is_string($id) || trim($id) === '') {
+            return null;
+        }
+
+        return trim($id);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function getBillDraft(User $user, Business $business, string $draftId): ?array
+    {
+        $draft = Cache::get($this->billDraftCacheKey($user, $business, $draftId));
+        if (is_array($draft)) {
+            // Sliding expiration while the user continues the bill-insert conversation.
+            Cache::put($this->billDraftCacheKey($user, $business, $draftId), $draft, now()->addHours(12));
+            Cache::put($this->latestBillDraftKey($user, $business), $draftId, now()->addHours(12));
+        }
+
+        return is_array($draft) ? $draft : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $patch
+     * @return array<string, mixed>
+     */
+    private function mergeBillDraft(array $base, array $patch): array
+    {
+        foreach ($patch as $k => $v) {
+            if (is_string($v) && trim($v) === '') {
+                continue;
+            }
+            if ($v === null) {
+                continue;
+            }
+            $base[$k] = $v;
+        }
+
+        if (($base['bill_category'] ?? null) !== Bill::CATEGORY_OTHER) {
+            $base['bill_category_other'] = null;
+        }
+
+        return $base;
+    }
+
+    private function normalizeDateYmd(mixed $value): ?string
+    {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return null;
+        }
+
+        return $raw;
+    }
+
+    private function nullableTrimmed(mixed $value): ?string
+    {
+        $s = trim((string) ($value ?? ''));
+
+        return $s === '' ? null : $s;
     }
 
     private function ownsBusiness(User $user, ?Business $business): bool

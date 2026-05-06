@@ -10,7 +10,7 @@ use Modules\HRManagement\Models\PayrollRuleSet;
 use Modules\Settings\Services\SettingsService;
 
 /**
- * Sri Lanka–style monthly worksheet: BASIC (reference), NO PAY (reference), EPF salary @ 26-day standard,
+ * Sri Lanka–style monthly worksheet: BASIC (reference), NO PAY (reference), EPF salary @ configured standard days,
  * pro-rated allowances keyed by allowance type name (medical / COLA / attendance / performance),
  * PAYE (APIT slabs), salary advance + stamp duty inputs, EPF 8% on EPF salary,
  * employer EPF 12% + ETF 3% (cost lines), and COST TO COMPANY ({@see PayrollRule::TYPE_EMPLOYER_TRACKING}).
@@ -39,10 +39,10 @@ final class LkTwentySixDayEpfWorksheetPayrollTemplate implements PayrollRegional
         return [
             'title' => __('LK 26-day EPF worksheet'),
             'description' => __(
-                'Compensation on a standard 26-day month: pro-rated EPF salary and matching allowance lines from actual days, NO PAY shown for reference, PAYE (APIT slabs), EPF 8% on EPF salary, advance & stamp inputs, plus employer EPF/ETF and cost-to-company. Allowance types must include “medical”, “COLA” or “cost of living”, “attendance”, or “performance” in the name.'
+                'Compensation on configured monthly working days: pro-rated EPF salary and matching allowance lines from actual days, NO PAY shown for reference, PAYE (APIT slabs), EPF 8% on EPF salary, advance & stamp inputs, plus employer EPF/ETF and cost-to-company. Allowance types must include “medical”, “COLA” or “cost of living”, “attendance”, or “performance” in the name.'
             ),
             'highlights' => [
-                __('Uses hr.payroll.cycle.default_working_days (26) and per-employee Actual days'),
+                __('Uses hr.payroll.cycle.default_working_days from HR settings and per-employee Actual days'),
                 __('Supplementary pay pro-rated × (actual ÷ standard) from employee allowances'),
                 __('Columns: BASIC, NO PAY, EPF Salary, allowances, APIT Salary ref, PAYE, advance, stamp, EPF %, totals, employer EPF/ETF, COST'),
             ],
@@ -51,6 +51,11 @@ final class LkTwentySixDayEpfWorksheetPayrollTemplate implements PayrollRegional
 
     public function install(Business $business): string
     {
+        $configuredWorkingDays = (float) get_settings('hr.payroll.cycle.default_working_days', 26, $business);
+        if ($configuredWorkingDays <= 0) {
+            $configuredWorkingDays = 26;
+        }
+
         $ruleSet = PayrollRuleSet::query()
             ->where('business_id', $business->id)
             ->where('name', self::RULE_SET_NAME)
@@ -84,7 +89,8 @@ final class LkTwentySixDayEpfWorksheetPayrollTemplate implements PayrollRegional
             'hr.payroll.template' => self::KEY,
             'hr.payroll.build_mode' => 'standard_26_epf_sheet',
             'hr.payroll.cycle.default_name' => 'Monthly Payroll',
-            'hr.payroll.cycle.default_working_days' => 26,
+            // Respect current HR setting instead of forcing 26 on template apply.
+            'hr.payroll.cycle.default_working_days' => round($configuredWorkingDays, 2),
             'hr.payroll.statutory.epf.employee.percent' => 8,
             'hr.payroll.statutory.epf.employer.percent' => 12,
             'hr.payroll.statutory.etf.employer.percent' => 3,

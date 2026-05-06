@@ -65,9 +65,24 @@ final class PayrollComputationService
         $dailyBasic = round($basicSalaryMonthly / $standardDaysSetting, 6);
         $noPayAmount = round($dailyBasic * max(0.0, $cycleStandardDays - $effectiveActual), 2);
         $epfSalaryEarnedBase = round($dailyBasic * $effectiveActual, 2);
+        $basicSalaryEarned = round($dailyBasic * $effectiveActual, 2);
         $prorationRatio = $cycleStandardDays > 0 ? round($effectiveActual / $cycleStandardDays, 6) : 1.0;
 
         $employee->loadMissing('employeeAllowances.allowanceType');
+
+        $reductionMeta = [
+            'basic_salary_monthly' => $basicSalaryMonthly,
+            'basic_salary_earned' => $basicSalaryEarned,
+            'standard_days_setting' => $standardDaysSetting,
+            'standard_days' => $cycleStandardDays,
+            'actual_days' => $effectiveActual,
+            'proration_ratio' => $prorationRatio,
+            'no_pay_amount' => $noPayAmount,
+            'entered_attendance' => $enteredAttendance,
+            'cycle_period_start' => Carbon::parse($cycle->period_start)->toDateString(),
+            'cycle_period_end' => Carbon::parse($cycle->period_end)->toDateString(),
+            'employee_join_date' => $employee->date_of_joining?->toDateString(),
+        ];
 
         $ctx = [
             'payroll_build_mode' => $buildMode,
@@ -78,7 +93,8 @@ final class PayrollComputationService
             'epf_salary' => $epfSalaryEarnedBase,
             'salary_advance' => round((float) ($inputs['salary_advance'] ?? 0), 2),
             'stamp_duty' => round((float) ($inputs['stamp_duty'] ?? 0), 2),
-            'basic_salary' => $basicSalaryMonthly,
+            'basic_salary' => $basicSalaryEarned,
+            'basic_salary_monthly' => $basicSalaryMonthly,
             'gross_salary' => (float) ($employee->salary ?? 0),
             'overtime_hours' => (float) ($inputs['overtime_hours'] ?? 0),
             'overtime_rate' => (float) ($inputs['overtime_rate'] ?? $defaultOvertimeRate),
@@ -127,7 +143,7 @@ final class PayrollComputationService
         $net = round($gross - $deductions, 2);
 
         /** @var PayrollItem $item */
-        $item = DB::transaction(function () use ($cycle, $employee, $inputs, $components, $errors, $basic, $overtime, $gross, $deductions, $net): PayrollItem {
+        $item = DB::transaction(function () use ($cycle, $employee, $inputs, $components, $errors, $basic, $overtime, $gross, $deductions, $net, $reductionMeta): PayrollItem {
             $item = PayrollItem::query()->firstOrNew([
                 'payroll_cycle_id' => $cycle->id,
                 'employee_id' => $employee->id,
@@ -141,7 +157,10 @@ final class PayrollComputationService
                 'total_deductions' => $deductions,
                 'net_pay' => $net,
                 'inputs_json' => $inputs,
-                'snapshot_json' => ['errors' => $errors],
+                'snapshot_json' => [
+                    'errors' => $errors,
+                    'reduction' => $reductionMeta,
+                ],
             ]);
             $item->save();
 

@@ -13,7 +13,7 @@
                     <i class="fa fa-sparkles"></i>
                 </div>
                 <h1 class="aibot-welcome-title">How can I help today?</h1>
-                <p class="aibot-welcome-sub muted">Ask about balances, bills, rentals, loans, ledger activity, or HR. Context: <strong>{{ $businessLabel }}</strong>@if(!$business)<span> — choose a business in the header for company-specific answers.</span>@endif Answers use Google Gemini with read-only workspace tools (no payments or edits from chat).</p>
+                <p class="aibot-welcome-sub muted">Ask about balances, bills, rentals, loans, ledger activity, or HR. Context: <strong>{{ $businessLabel }}</strong>@if(!$business)<span> — choose a business in the header for company-specific answers.</span>@endif Answers use Google Gemini tools. Bill insertion is supported with a draft + confirmation flow.</p>
                 <div class="aibot-suggestions">
                     <button type="button" class="aibot-chip" data-prompt="Summarize cash position for my business">Summarize cash position</button>
                     <button type="button" class="aibot-chip" data-prompt="What HR records should I maintain?">HR compliance tips</button>
@@ -160,7 +160,21 @@
     }
     .aibot-msg-ai{
         border-bottom-left-radius:6px;background:color-mix(in srgb,var(--card) 96%,#000);border:1px solid var(--border);color:var(--text);margin-left:0;
+        white-space:normal;
     }
+    .aibot-msg-ai p{margin:0 0 10px}
+    .aibot-msg-ai p:last-child{margin-bottom:0}
+    .aibot-msg-ai h1,.aibot-msg-ai h2,.aibot-msg-ai h3{margin:6px 0 8px;line-height:1.3}
+    .aibot-msg-ai h1{font-size:1.05rem}
+    .aibot-msg-ai h2{font-size:1rem}
+    .aibot-msg-ai h3{font-size:.95rem}
+    .aibot-msg-ai ul,.aibot-msg-ai ol{margin:0 0 10px 18px;padding:0}
+    .aibot-msg-ai li{margin:3px 0}
+    .aibot-msg-ai pre{margin:8px 0;padding:10px 12px;border-radius:10px;overflow:auto;background:color-mix(in srgb,#0b1220 82%,var(--card));color:#e5e7eb;font-size:12px;line-height:1.45}
+    .aibot-msg-ai code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.92em}
+    .aibot-msg-ai :not(pre)>code{padding:1px 5px;border-radius:6px;background:color-mix(in srgb,var(--primary) 10%,transparent);border:1px solid color-mix(in srgb,var(--primary) 22%,var(--border))}
+    .aibot-msg-ai a{color:color-mix(in srgb,var(--primary) 82%,var(--text));text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--primary) 32%,transparent)}
+    .aibot-msg-ai a:hover{color:var(--primary);border-bottom-color:var(--primary)}
     .aibot-composer-wrap{
         flex-shrink:0;
         position:relative;
@@ -344,6 +358,67 @@
         const d = document.createElement('div');
         d.textContent = text;
         return d.innerHTML;
+    }
+
+    function renderChatMarkup(text) {
+        var src = String(text || '');
+        var codeBlocks = [];
+        src = src.replace(/```([\s\S]*?)```/g, function (_, code) {
+            var idx = codeBlocks.push('<pre><code>' + escapeHtml(String(code).trim()) + '</code></pre>') - 1;
+            return '@@CODEBLOCK_' + idx + '@@';
+        });
+
+        var lines = src.split(/\r?\n/);
+        var out = [];
+        var inUl = false;
+        var inOl = false;
+        var closeLists = function () {
+            if (inUl) { out.push('</ul>'); inUl = false; }
+            if (inOl) { out.push('</ol>'); inOl = false; }
+        };
+
+        for (var i = 0; i < lines.length; i++) {
+            var raw = lines[i];
+            var trimmed = raw.trim();
+            if (trimmed === '') {
+                closeLists();
+                continue;
+            }
+
+            var ulMatch = raw.match(/^\s*[-*]\s+(.+)$/);
+            if (ulMatch) {
+                if (!inUl) { closeLists(); out.push('<ul>'); inUl = true; }
+                out.push('<li>' + escapeHtml(ulMatch[1]) + '</li>');
+                continue;
+            }
+
+            var olMatch = raw.match(/^\s*\d+\.\s+(.+)$/);
+            if (olMatch) {
+                if (!inOl) { closeLists(); out.push('<ol>'); inOl = true; }
+                out.push('<li>' + escapeHtml(olMatch[1]) + '</li>');
+                continue;
+            }
+
+            closeLists();
+            var hMatch = raw.match(/^\s*(#{1,3})\s+(.+)$/);
+            if (hMatch) {
+                var lvl = hMatch[1].length;
+                out.push('<h' + lvl + '>' + escapeHtml(hMatch[2]) + '</h' + lvl + '>');
+            } else {
+                out.push('<p>' + escapeHtml(raw) + '</p>');
+            }
+        }
+        closeLists();
+
+        var html = out.join('\n');
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/(^|[\s(])\*(.+?)\*(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        html = html.replace(/(^|[\s>])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+        html = html.replace(/@@CODEBLOCK_(\d+)@@/g, function (_, n) { return codeBlocks[Number(n)] || ''; });
+
+        return html;
     }
 
     function hideWelcomeIfNeeded() {
@@ -542,7 +617,7 @@
 
     function replaceTypingWithAi(text, typingRow) {
         const bubble = typingRow.querySelector('.aibot-msg-ai');
-        if (bubble) bubble.innerHTML = escapeHtml(text);
+        if (bubble) bubble.innerHTML = renderChatMarkup(text);
         typingRow.removeAttribute('data-role');
         thread.scrollTop = thread.scrollHeight;
     }

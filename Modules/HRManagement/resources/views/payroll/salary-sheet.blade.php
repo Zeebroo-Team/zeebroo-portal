@@ -12,6 +12,8 @@
     $sheetColumns = $sheetColumns ?? [];
     $sheetColumnCount = count($sheetColumns);
     $salarySheetTableMinWidth = max(720, $sheetColumnCount * 94);
+    $varianceMeta = $varianceMeta ?? [];
+    $statusCounts = $summary['status_counts'] ?? ['computed' => 0, 'finalized' => 0, 'error' => 0, 'other' => 0];
 @endphp
 
 @section('content')
@@ -139,6 +141,10 @@
         .salary-sheet__status{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.03em;border:1px solid var(--border);background:color-mix(in srgb,var(--card)96%,transparent);color:var(--muted);white-space:nowrap}
         .salary-sheet__status--finalized{border-color:color-mix(in srgb,#22c55e 45%,var(--border));color:#15803d;background:color-mix(in srgb,#22c55e 10%,transparent)}
         .salary-sheet__status--draft{border-color:color-mix(in srgb,var(--primary)38%,var(--border));color:color-mix(in srgb,var(--primary)78%,var(--text));background:color-mix(in srgb,var(--primary)10%,transparent)}
+        .salary-sheet__status--error{border-color:color-mix(in srgb,#ef4444 50%,var(--border));color:#b91c1c;background:color-mix(in srgb,#ef4444 11%,transparent)}
+        .salary-sheet__num--pos{color:#15803d}
+        .salary-sheet__num--neg{color:#b91c1c}
+        .salary-sheet-note{margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,#f59e0b 45%,var(--border));background:color-mix(in srgb,#f59e0b 10%,transparent);font-size:12px;color:var(--text)}
 
         .salary-sheet-empty{padding:28px 16px;text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
         .salary-sheet-empty i.fa{display:block;margin:0 auto 10px;font-size:28px;opacity:.35;color:var(--muted)}
@@ -184,6 +190,10 @@
                         <li class="salary-sheet-meta__item"><i class="fa fa-layer-group" aria-hidden="true"></i>{{ __('Rule set') }} <span>{{ $cycle->ruleSet?->name ?? '—' }}</span></li>
                         <li class="salary-sheet-meta__item"><i class="fa fa-coins" aria-hidden="true"></i>{{ __('Currency') }} <span>{{ $sheetCurrency }}</span></li>
                         <li class="salary-sheet-meta__item"><i class="fa fa-flag-checkered" aria-hidden="true"></i>{{ __('Cycle status') }} <span>{{ $cycleStatusLabel }}</span></li>
+                        <li class="salary-sheet-meta__item"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i>{{ __('Error rows') }} <span>{{ (int) ($statusCounts['error'] ?? 0) }}</span></li>
+                        @if(!empty($varianceMeta['previous_cycle_label']))
+                            <li class="salary-sheet-meta__item"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i>{{ __('Variance baseline') }} <span>{{ $varianceMeta['previous_cycle_label'] }}</span></li>
+                        @endif
                     </ul>
                 </div>
                 <div class="salary-sheet-actions">
@@ -217,6 +227,11 @@
         </header>
 
         <section class="salary-sheet-table-card">
+            @if((int) ($statusCounts['error'] ?? 0) > 0)
+                <p class="salary-sheet-note">
+                    {{ __('Some rows are in Error status and are still included in totals for visibility. Please recompute those employees.') }}
+                </p>
+            @endif
             <p class="salary-sheet-table-card__caption" id="salary-sheet-table-desc"><strong>{{ __('Detail') }}</strong> — {{ __('Scroll horizontally if needed; the employee column stays visible.') }}</p>
             <div class="salary-sheet-scroll" role="region" aria-labelledby="salary-sheet-table-desc" tabindex="0">
                 <table class="salary-sheet__table" style="min-width:{{ $salarySheetTableMinWidth }}px">
@@ -238,7 +253,11 @@
                         @forelse($rows as $row)
                             @php
                                 $rowStatusRaw = strtolower((string) ($row['status'] ?? ''));
-                                $statusClass = str_contains($rowStatusRaw, 'final') ? 'salary-sheet__status--finalized' : 'salary-sheet__status--draft';
+                                $statusClass = match (true) {
+                                    str_contains($rowStatusRaw, 'error') => 'salary-sheet__status--error',
+                                    str_contains($rowStatusRaw, 'final') => 'salary-sheet__status--finalized',
+                                    default => 'salary-sheet__status--draft',
+                                };
                                 $cellValues = $row['values'] ?? [];
                             @endphp
                             <tr>
@@ -256,8 +275,11 @@
                                             $ckey = (string) ($col['key'] ?? '');
                                             $amount = (float) ($cellValues[$ckey] ?? 0);
                                             $emph = !empty($col['emphasize']);
+                                            $isVariance = str_starts_with($ckey, 'var_');
+                                            $varianceClass = $isVariance ? ($amount < 0 ? 'salary-sheet__num--neg' : ($amount > 0 ? 'salary-sheet__num--pos' : '')) : '';
+                                            $displayAmount = $isVariance && $amount > 0 ? '+'.number_format($amount, 2) : number_format($amount, 2);
                                         @endphp
-                                        <td class="salary-sheet__num @if($emph) salary-sheet__num--emph @endif">{{ number_format($amount, 2) }}</td>
+                                        <td class="salary-sheet__num @if($emph) salary-sheet__num--emph @endif {{ $varianceClass }}">{{ $displayAmount }}</td>
                                     @endif
                                 @endforeach
                             </tr>

@@ -17,6 +17,7 @@ use Modules\HRManagement\Models\PayrollRule;
 use Modules\HRManagement\Models\PayrollRuleSet;
 use Modules\HRManagement\Payroll\RegionalTemplates\PayrollRegionalTemplateRegistry;
 use Modules\HRManagement\Payroll\RegionalTemplates\SriLankanEmployeeStandardPayrollTemplate;
+use Modules\HRManagement\Services\HrPayslipLeaveService;
 use Modules\HRManagement\Services\HrPayrollSettingsService;
 use Modules\HRManagement\Services\PayrollComputationService;
 use Modules\HRManagement\Services\PayrollCustomTemplateService;
@@ -36,6 +37,7 @@ class HrPayrollController extends Controller
         private readonly PayrollSalarySheetPresentationService $salarySheetPresentation,
         private readonly PayrollSalarySheetExcelExportService $salarySheetExcelExport,
         private readonly PayrollCyclePaymentService $payrollCyclePayment,
+        private readonly HrPayslipLeaveService $hrPayslipLeave,
         private readonly SettingsService $settings,
     ) {}
 
@@ -383,6 +385,7 @@ class HrPayrollController extends Controller
             'cycle' => $cycle,
             'sheetColumns' => $sheet['columns'],
             'rows' => $sheet['rows'],
+            'varianceMeta' => $sheet['variance'] ?? [],
             'summary' => $summary,
         ]);
     }
@@ -475,11 +478,13 @@ class HrPayrollController extends Controller
         abort_if((int) $cycle->business_id !== (int) $business->id, 404);
         abort_if((int) $item->payroll_cycle_id !== (int) $cycle->id, 404);
         $item->load(['employee', 'components']);
+        $leaveContext = $this->hrPayslipLeave->payslipLeaveContext($cycle, $item->employee);
 
         return view('hrmanagement::payroll.payslip', [
             'business' => $business,
             'cycle' => $cycle,
             'item' => $item,
+            'leaveContext' => $leaveContext,
         ]);
     }
 
@@ -490,10 +495,12 @@ class HrPayrollController extends Controller
         abort_if((int) $item->payroll_cycle_id !== (int) $cycle->id, 404);
 
         $item->load(['employee', 'components']);
+        $leaveContext = $this->hrPayslipLeave->payslipLeaveContext($cycle, $item->employee);
         $html = view('hrmanagement::payroll.payslip', [
             'business' => $business,
             'cycle' => $cycle,
             'item' => $item,
+            'leaveContext' => $leaveContext,
             'isDownload' => true,
         ])->render();
 
@@ -583,7 +590,16 @@ class HrPayrollController extends Controller
     }
 
     /**
-     * @return array{total_gross: float,total_deductions: float,total_net: float,epf: float,etf: float,apit: float,employee_rows: array<int, array<string, mixed>>}
+     * @return array{
+     *     total_gross: float,
+     *     total_deductions: float,
+     *     total_net: float,
+     *     epf: float,
+     *     etf: float,
+     *     apit: float,
+     *     employee_rows: array<int, array<string, mixed>>,
+     *     status_counts: array{computed: int, finalized: int, error: int, other: int}
+     * }
      */
     private function buildCycleSummary(PayrollCycle $cycle): array
     {
@@ -596,9 +612,22 @@ class HrPayrollController extends Controller
             'etf' => 0.0,
             'apit' => 0.0,
             'employee_rows' => [],
+            'status_counts' => [
+                'computed' => 0,
+                'finalized' => 0,
+                'error' => 0,
+                'other' => 0,
+            ],
         ];
 
         foreach ($items as $item) {
+            $status = strtolower((string) $item->status);
+            if (array_key_exists($status, $totals['status_counts'])) {
+                $totals['status_counts'][$status]++;
+            } else {
+                $totals['status_counts']['other']++;
+            }
+
             $row = [
                 'item_id' => $item->id,
                 'employee_name' => $item->employee?->full_name,

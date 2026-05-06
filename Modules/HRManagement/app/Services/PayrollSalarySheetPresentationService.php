@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\HRManagement\Services;
 
+use Illuminate\Support\Carbon;
 use Modules\Business\Models\Business;
 use Modules\HRManagement\Models\PayrollCycle;
 use Modules\HRManagement\Models\PayrollItem;
@@ -19,7 +20,11 @@ final class PayrollSalarySheetPresentationService
     private const SKIPPED_DYNAMIC_CODES = ['BASIC_SALARY', 'OVERTIME'];
 
     /**
-     * @return array{columns: list<array<string, mixed>>, rows: list<array<string, mixed>>}
+     * @return array{
+     *     columns: list<array<string, mixed>>,
+     *     rows: list<array<string, mixed>>,
+     *     variance: array{previous_cycle_label: ?string}
+     * }
      */
     public function forCycle(PayrollCycle $cycle, Business $business): array
     {
@@ -40,18 +45,28 @@ final class PayrollSalarySheetPresentationService
         }
 
         $columns = $this->columnsFor($cycle, $business);
-        $rows = $this->buildRows($cycle, $columns);
+        $columns = $this->withVarianceColumns($columns);
+        $previousCycle = $this->previousCycleForVariance($cycle);
+        $previousByEmployee = $this->previousCycleItemsByEmployee($previousCycle);
+        $rows = $this->buildRows($cycle, $columns, $previousByEmployee);
+        $variance = [
+            'previous_cycle_label' => $previousCycle?->name,
+        ];
 
         return [
             'columns' => $columns,
             'rows' => $rows,
+            'variance' => $variance,
         ];
     }
 
-    /** @param  list<array<string, mixed>>  $columns */
-    private function buildRows(PayrollCycle $cycle, array $columns): array
+    /**
+     * @param  list<array<string, mixed>>  $columns
+     * @param  array<int, PayrollItem>  $previousByEmployee
+     */
+    private function buildRows(PayrollCycle $cycle, array $columns, array $previousByEmployee): array
     {
-        return $cycle->items->map(function (PayrollItem $item) use ($columns): array {
+        return $cycle->items->map(function (PayrollItem $item) use ($columns, $previousByEmployee): array {
             $byCode = [];
             foreach ($item->components as $component) {
                 $code = strtoupper(trim((string) $component->code));
@@ -61,29 +76,67 @@ final class PayrollSalarySheetPresentationService
                 $byCode[$code] = round(($byCode[$code] ?? 0) + abs((float) $component->amount), 2);
             }
 
+            $previous = $previousByEmployee[(int) $item->employee_id] ?? null;
+            $variance = [
+                'gross' => round((float) $item->gross_earnings - (float) ($previous?->gross_earnings ?? 0), 2),
+                'deductions' => round((float) $item->total_deductions - (float) ($previous?->total_deductions ?? 0), 2),
+                'net' => round((float) $item->net_pay - (float) ($previous?->net_pay ?? 0), 2),
+            ];
+
             $values = [];
             foreach ($columns as $column) {
                 $kind = (string) ($column['kind'] ?? '');
                 if ($kind !== 'money') {
                     continue;
                 }
-                $values[(string) $column['key']] = $this->numericCell($column, $item, $byCode);
+                $values[(string) $column['key']] = $this->numericCell($column, $item, $byCode, $variance);
             }
 
             return [
                 'employee_name' => (string) ($item->employee?->full_name ?? __('Unknown employee')),
                 'employee_id' => (string) ($item->employee?->employee_id ?? ''),
+                'payroll_item_id' => (int) $item->id,
                 'status' => ucfirst((string) $item->status),
                 'values' => $values,
+                'variance' => $variance,
             ];
         })->values()->all();
+    }
+
+    private function previousCycleForVariance(PayrollCycle $cycle): ?PayrollCycle
+    {
+        $periodStart = Carbon::parse($cycle->period_start)->toDateString();
+
+        return PayrollCycle::query()
+            ->where('business_id', $cycle->business_id)
+            ->where('id', '!=', $cycle->id)
+            ->whereDate('period_end', '<', $periodStart)
+            ->orderByDesc('period_end')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @return array<int, PayrollItem>
+     */
+    private function previousCycleItemsByEmployee(?PayrollCycle $previousCycle): array
+    {
+        if ($previousCycle === null) {
+            return [];
+        }
+
+        return $previousCycle->items()
+            ->with(['components'])
+            ->get()
+            ->keyBy(static fn (PayrollItem $item): int => (int) $item->employee_id)
+            ->all();
     }
 
     /**
      * @param  array<string, mixed>  $column
      * @param  array<string, float>  $byCode
      */
-    private function numericCell(array $column, PayrollItem $item, array $byCode): float
+    private function numericCell(array $column, PayrollItem $item, array $byCode, array $variance): float
     {
         $src = $column['src'] ?? null;
         if (! is_array($src)) {
@@ -94,8 +147,55 @@ final class PayrollSalarySheetPresentationService
         return match ($t) {
             'item' => $this->itemNumericField($item, (string) ($src['f'] ?? '')),
             'component' => round((float) ($byCode[strtoupper((string) ($src['c'] ?? ''))] ?? 0), 2),
+            'variance' => round((float) ($variance[(string) ($src['f'] ?? '')] ?? 0), 2),
             default => 0.0,
         };
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $columns
+     * @return list<array<string, mixed>>
+     */
+    private function withVarianceColumns(array $columns): array
+    {
+        $varianceColumns = [
+            [
+                'key' => 'var_gross',
+                'kind' => 'money',
+                'label' => __('Δ Gross'),
+                'src' => ['t' => 'variance', 'f' => 'gross'],
+            ],
+            [
+                'key' => 'var_deductions',
+                'kind' => 'money',
+                'label' => __('Δ Deductions'),
+                'src' => ['t' => 'variance', 'f' => 'deductions'],
+            ],
+            [
+                'key' => 'var_net',
+                'kind' => 'money',
+                'label' => __('Δ Net'),
+                'emphasize' => true,
+                'src' => ['t' => 'variance', 'f' => 'net'],
+            ],
+        ];
+
+        $statusIndex = null;
+        foreach ($columns as $idx => $column) {
+            if (($column['kind'] ?? '') === 'status') {
+                $statusIndex = $idx;
+                break;
+            }
+        }
+        if ($statusIndex === null) {
+            return array_merge($columns, $varianceColumns);
+        }
+
+        return array_values(array_merge(
+            array_slice($columns, 0, $statusIndex),
+            $varianceColumns,
+            array_slice($columns, $statusIndex),
+        ));
     }
 
     /** @return list<array<string, mixed>> */
