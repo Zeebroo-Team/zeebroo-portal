@@ -246,6 +246,25 @@
             ? app(\Modules\Account\Services\RentalService::class)->businessHasOverdueRentalPayments($navBusiness)
             : false;
         $showSidebarBillsLink = $navBusiness && $navBusiness->bills()->exists();
+        $showSidebarProductBrandsLink = $navBusiness && Route::has('product.brands.index') && $navBusiness->productBrands()->exists();
+        $showSidebarProductCategoriesLink = $navBusiness && Route::has('product.categories.index') && $navBusiness->productCategories()->exists();
+        $showSidebarProductUnitsLink = $navBusiness && Route::has('product.units.index') && $navBusiness->productUnits()->exists();
+        $showSidebarProductsLink = $navBusiness && Route::has('product.index') && $navBusiness->products()->exists();
+        $showSidebarProductSection = $showSidebarProductBrandsLink
+            || $showSidebarProductCategoriesLink
+            || $showSidebarProductUnitsLink
+            || $showSidebarProductsLink;
+        $showSidebarPurchasesLink = $navBusiness && Route::has('purchase.index') && $navBusiness->purchases()->exists();
+        $showSidebarGrnLink = $navBusiness && Route::has('purchase.grn.index') && $navBusiness->goodsReceiveNotes()->exists();
+        $showSidebarSuppliersLink = $navBusiness && Route::has('purchase.suppliers.index') && $navBusiness->suppliers()->exists();
+        $showSidebarChequesLink = $navBusiness && Route::has('purchase.cheques.index') && $navBusiness->chequePayments()->exists();
+        $showSidebarPurchaseSection = $showSidebarPurchasesLink
+            || $showSidebarGrnLink
+            || $showSidebarSuppliersLink
+            || $showSidebarChequesLink;
+        $showSidebarFilesLink = $navBusiness && (
+            $navBusiness->fileManagerFiles()->exists() || $navBusiness->fileManagerFolders()->exists()
+        );
         $showSidebarPropertiesLink = $navBusiness
             ? \Modules\Account\Models\Property::query()->where('business_id', $navBusiness->id)->exists()
             : false;
@@ -288,6 +307,17 @@
             $showSidebarLoansLink = false;
             $showSidebarRentalsLink = false;
             $showSidebarBillsLink = false;
+            $showSidebarProductBrandsLink = false;
+            $showSidebarProductCategoriesLink = false;
+            $showSidebarProductUnitsLink = false;
+            $showSidebarProductsLink = false;
+            $showSidebarProductSection = false;
+            $showSidebarPurchasesLink = false;
+            $showSidebarGrnLink = false;
+            $showSidebarSuppliersLink = false;
+            $showSidebarChequesLink = false;
+            $showSidebarPurchaseSection = false;
+            $showSidebarFilesLink = false;
             $showSidebarPropertiesLink = false;
             $sidebarLoanDueHighlight = false;
             $sidebarRentalDueHighlight = false;
@@ -357,6 +387,51 @@
                         <span class="menu-rentals__pulse" aria-hidden="true"></span>
                     @endif
                 </a>
+            @endif
+            @if($showSidebarProductSection)
+                <div class="menu-group-title">
+                    <i class="fa fa-boxes-stacked"></i><span>Catalog</span>
+                </div>
+                <div class="submenu" aria-label="Catalog">
+                    @if($showSidebarProductBrandsLink)
+                        <a href="{{ route('product.brands.index') }}" class="{{ request()->routeIs('product.brands.*') ? 'active' : '' }}"><i class="fa fa-tag"></i><span>Brands</span></a>
+                    @endif
+                    @if($showSidebarProductCategoriesLink)
+                        <a href="{{ route('product.categories.index') }}" class="{{ request()->routeIs('product.categories.*') ? 'active' : '' }}"><i class="fa fa-folder-tree"></i><span>Categories</span></a>
+                    @endif
+                    @if($showSidebarProductUnitsLink)
+                        <a href="{{ route('product.units.index') }}" class="{{ request()->routeIs('product.units.*') ? 'active' : '' }}"><i class="fa fa-ruler"></i><span>Units</span></a>
+                    @endif
+                    @if($showSidebarProductsLink)
+                        <a href="{{ route('product.index') }}" @class([
+                            'active' => request()->routeIs('product.index', 'product.store', 'product.show', 'product.edit', 'product.update', 'product.destroy', 'product.sku.*', 'product.images.*'),
+                        ])><i class="fa fa-box"></i><span>Products</span></a>
+                    @endif
+                </div>
+            @endif
+            @if($showSidebarPurchaseSection)
+                <div class="menu-group-title">
+                    <i class="fa fa-cart-shopping"></i><span>Purchase orders</span>
+                </div>
+                <div class="submenu" aria-label="Purchase orders">
+                    @if($showSidebarPurchasesLink)
+                        <a href="{{ route('purchase.index') }}" @class([
+                            'active' => request()->routeIs('purchase.index', 'purchase.store', 'purchase.show', 'purchase.edit', 'purchase.update', 'purchase.place-order', 'purchase.receive', 'purchase.cancel', 'purchase.destroy'),
+                        ])><i class="fa fa-file-invoice"></i><span>Purchase orders</span></a>
+                    @endif
+                    @if($showSidebarGrnLink)
+                        <a href="{{ route('purchase.grn.index') }}" class="{{ request()->routeIs('purchase.grn.*') ? 'active' : '' }}"><i class="fa fa-truck-ramp-box"></i><span>Goods receive</span></a>
+                    @endif
+                    @if($showSidebarSuppliersLink)
+                        <a href="{{ route('purchase.suppliers.index') }}" class="{{ request()->routeIs('purchase.suppliers.*') ? 'active' : '' }}"><i class="fa fa-truck-field"></i><span>Suppliers</span></a>
+                    @endif
+                    @if($showSidebarChequesLink)
+                        <a href="{{ route('purchase.cheques.index') }}" class="{{ request()->routeIs('purchase.cheques.*') ? 'active' : '' }}"><i class="fa fa-money-check"></i><span>Cheques</span></a>
+                    @endif
+                </div>
+            @endif
+            @if($showSidebarFilesLink && Route::has('filemanager.index'))
+                <a href="{{ route('filemanager.index') }}" class="{{ request()->routeIs('filemanager.*') ? 'active' : '' }}"><i class="fa fa-folder-open"></i><span>Files</span></a>
             @endif
             @if($navBusiness && $hrPayrollOptedIn)
                 <div class="menu-group-title">

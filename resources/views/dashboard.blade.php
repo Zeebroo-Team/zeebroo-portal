@@ -450,10 +450,17 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
             </div>
         </div>
     @endif
-    <div class="card" style="max-width:100%;">
-        <h2 style="margin:0 0 8px;">Do you want manage your business expenses?</h2>
-        <p class="muted" style="margin:0 0 14px;">Choose expense categories to start tracking your business spending professionally.</p>
-        <div id="overview-expense-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <div id="overview-add-panel-wrap" style="display:none;justify-content:flex-end;align-items:center;margin-bottom:8px;">
+        <button type="button" id="overview-add-panel-btn" class="linkbtn" style="padding:7px 11px;font-size:12px;border-radius:8px;">
+            <i class="fa fa-plus" style="margin-right:6px;"></i>Add panel
+        </button>
+    </div>
+    <div id="overview-panels-stack" style="display:grid;gap:14px;">
+    <div class="card overview-panel-card" data-panel-id="expense" style="max-width:100%;position:relative;">
+        <span class="overview-panel-handle" title="Drag panel"><i class="fa fa-grip-lines" aria-hidden="true"></i></span>
+        <h2 class="overview-panel-title" data-panel-title="expense" style="margin:0 0 8px;">Do you want manage your business expenses?</h2>
+        <p class="muted overview-panel-subtitle" data-panel-subtitle="expense" style="margin:0 0 14px;">Choose expense categories to start tracking your business spending professionally.</p>
+        <div id="overview-expense-grid" class="overview-panel-grid" data-panel-key="expense" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
             @if($loanOverviewTooltip && ($loanOverviewTooltip['hasLoans'] ?? false))
             <style>
                 #dash-loan-summary-pop{position:fixed;z-index:220;opacity:0;visibility:hidden;width:min(340px,calc(100vw - 20px));max-height:70vh;overflow:auto;pointer-events:none;
@@ -509,10 +516,18 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
                 <div style="font-weight:700;"><i class="fa fa-screwdriver-wrench" style="margin-right:6px;"></i>Modification</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Capture renovation or improvement costs.</div>
             </a>
-            <div class="overview-tile-item" data-tile-id="expense-purchases" style="border:1px solid var(--border);border-radius:12px;padding:12px;">
-                <div style="font-weight:700;"><i class="fa fa-cart-shopping" style="margin-right:6px;"></i>Purchases</div>
-                <div class="muted" style="font-size:12px;margin-top:4px;">Track inventory and business purchases.</div>
-            </div>
+            <a class="overview-tile-item" data-tile-id="expense-purchases" href="{{ Route::has('purchase.index') ? route('purchase.index') : route('product.index') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
+               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-weight:700;"><i class="fa fa-file-invoice" style="margin-right:6px;"></i>Purchase orders</div>
+                <div class="muted" style="font-size:12px;margin-top:4px;">Create POs, place with suppliers, and receive stock.</div>
+            </a>
+            @if(Route::has('filemanager.index'))
+            <a class="overview-tile-item" data-tile-id="expense-files" href="{{ route('filemanager.index') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
+               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-weight:700;"><i class="fa fa-folder-open" style="margin-right:6px;"></i>Files</div>
+                <div class="muted" style="font-size:12px;margin-top:4px;">Upload and organize business documents.</div>
+            </a>
+            @endif
             <div class="overview-tile-item" data-tile-id="expense-legal" style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-scale-balanced" style="margin-right:6px;"></i>Legal</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Manage legal and compliance-related fees.</div>
@@ -535,10 +550,11 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
             </div>
         </div>
     </div>
-    <div class="card" style="max-width:100%;margin-top:14px;">
-        <h2 style="margin:0 0 8px;">Hows your income?</h2>
-        <p class="muted" style="margin:0 0 14px;">Monitor your revenue performance and growth metrics in one place.</p>
-        <div id="overview-income-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <div class="card overview-panel-card" data-panel-id="income" style="max-width:100%;position:relative;">
+        <span class="overview-panel-handle" title="Drag panel"><i class="fa fa-grip-lines" aria-hidden="true"></i></span>
+        <h2 class="overview-panel-title" data-panel-title="income" style="margin:0 0 8px;">Hows your income?</h2>
+        <p class="muted overview-panel-subtitle" data-panel-subtitle="income" style="margin:0 0 14px;">Monitor your revenue performance and growth metrics in one place.</p>
+        <div id="overview-income-grid" class="overview-panel-grid" data-panel-key="income" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
             <div class="overview-tile-item" data-tile-id="income-sales" style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-chart-line" style="margin-right:6px;"></i>Sales</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Track total sales trends and daily performance.</div>
@@ -560,6 +576,7 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
                 <div class="muted" style="font-size:12px;margin-top:4px;">Track lead pipeline and conversion value.</div>
             </div>
         </div>
+    </div>
     </div>
 @endif
 
@@ -611,12 +628,37 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
 
     const style = document.createElement('style');
     style.textContent = [
-        '.overview-tile-item{cursor:grab;}',
-        '.overview-tile-item:active{cursor:grabbing;}',
+        '.overview-tile-item{position:relative;}',
+        '.overview-tile-handle{position:absolute;top:8px;right:8px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:color-mix(in srgb,var(--card) 92%,transparent);color:var(--muted);cursor:grab;z-index:3;}',
+        '.overview-tile-handle:active{cursor:grabbing;}',
+        '.overview-tile-handle:hover{border-color:color-mix(in srgb,var(--primary) 35%,var(--border));color:var(--text);}',
+        '.overview-tile-handle i{font-size:11px;line-height:1;}',
+        '.overview-panel-card{padding-top:18px;}',
+        '.overview-panel-handle{position:absolute;top:8px;right:8px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:color-mix(in srgb,var(--card) 92%,transparent);color:var(--muted);cursor:grab;z-index:4;}',
+        '.overview-panel-handle:active{cursor:grabbing;}',
+        '.overview-panel-handle:hover{border-color:color-mix(in srgb,var(--primary) 35%,var(--border));color:var(--text);}',
+        '.overview-panel-title{cursor:text;}',
+        '.overview-panel-title.overview-panel-title--editing{outline:2px solid color-mix(in srgb,var(--primary) 35%,transparent);outline-offset:2px;border-radius:6px;padding:2px 6px;margin:-2px -6px 6px;}',
+        '.overview-panel-subtitle{cursor:text;}',
+        '.overview-panel-subtitle.overview-panel-subtitle--editing{outline:2px solid color-mix(in srgb,var(--primary) 28%,transparent);outline-offset:2px;border-radius:6px;padding:2px 6px;margin:-2px -6px 8px;}',
+        '.overview-panel-empty{border:1px dashed color-mix(in srgb,var(--primary) 22%,var(--border));border-radius:10px;padding:12px;font-size:12px;color:var(--muted);text-align:center;}',
+        '.overview-panel-sort-ghost{opacity:.7;}',
         '.overview-sort-ghost{opacity:.6;transform:scale(.99);}',
         '.overview-sort-chosen{box-shadow:0 8px 22px -14px rgba(0,0,0,.45);}'
     ].join('');
     document.head.appendChild(style);
+    let dragMoved = false;
+
+    function ensureHandles(gridEl) {
+        Array.from(gridEl.querySelectorAll('.overview-tile-item')).forEach(function (tile) {
+            if (tile.querySelector('.overview-tile-handle')) return;
+            const handle = document.createElement('span');
+            handle.className = 'overview-tile-handle';
+            handle.setAttribute('title', 'Drag to reorder');
+            handle.innerHTML = '<i class="fa fa-grip-vertical" aria-hidden="true"></i>';
+            tile.appendChild(handle);
+        });
+    }
 
     function saveOrder(gridEl, key) {
         const ids = Array.from(gridEl.children)
@@ -639,21 +681,291 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
         });
     }
 
-    function init(gridId, key) {
-        const grid = document.getElementById(gridId);
-        if (!grid) return;
-        applyOrder(grid, key);
-        Sortable.create(grid, {
-            draggable: '.overview-tile-item',
-            animation: 170,
-            ghostClass: 'overview-sort-ghost',
-            chosenClass: 'overview-sort-chosen',
-            onEnd: function () { saveOrder(grid, key); }
+    function saveAllOrders() {
+        document.querySelectorAll('.overview-panel-grid[data-panel-key]').forEach(function (grid) {
+            saveOrder(grid, getGridKey(grid));
         });
     }
 
-    init('overview-expense-grid', 'expense');
-    init('overview-income-grid', 'income');
+    function savePanelOrder(stackEl) {
+        const ids = Array.from(stackEl.children)
+            .map((el) => el.getAttribute('data-panel-id'))
+            .filter((v) => !!v);
+        localStorage.setItem(prefix + 'panels', JSON.stringify(ids));
+    }
+    function extraPanelsStorageKey() {
+        return prefix + 'extraPanels';
+    }
+
+    function titleStorageKey(panelKey) {
+        return prefix + 'panelTitle.' + panelKey;
+    }
+    function subtitleStorageKey(panelKey) {
+        return prefix + 'panelSubtitle.' + panelKey;
+    }
+
+    function wirePanelTitleInlineEdit() {
+        document.querySelectorAll('.overview-panel-title[data-panel-title]').forEach(function (titleEl) {
+            if (titleEl.dataset.inlineWiredTitle === '1') return;
+            titleEl.dataset.inlineWiredTitle = '1';
+            var panelKey = titleEl.getAttribute('data-panel-title');
+            if (!panelKey) return;
+            var original = titleEl.textContent.trim();
+            var saved = localStorage.getItem(titleStorageKey(panelKey));
+            if (saved && saved.trim() !== '') {
+                titleEl.textContent = saved;
+            }
+
+            function beginEdit() {
+                if (titleEl.isContentEditable) return;
+                titleEl.classList.add('overview-panel-title--editing');
+                titleEl.contentEditable = 'true';
+                titleEl.dataset.originalTitle = titleEl.textContent.trim() || original;
+                var range = document.createRange();
+                range.selectNodeContents(titleEl);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+
+            function finishEdit(cancel) {
+                if (!titleEl.isContentEditable) return;
+                var fallback = titleEl.dataset.originalTitle || original;
+                var next = cancel ? fallback : titleEl.textContent.replace(/\s+/g, ' ').trim();
+                if (next === '') next = fallback;
+                titleEl.textContent = next;
+                titleEl.contentEditable = 'false';
+                titleEl.classList.remove('overview-panel-title--editing');
+                localStorage.setItem(titleStorageKey(panelKey), next);
+                persistExtraPanels();
+            }
+
+            titleEl.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                beginEdit();
+            });
+            titleEl.addEventListener('blur', function () { finishEdit(false); });
+            titleEl.addEventListener('keydown', function (e) {
+                if (!titleEl.isContentEditable) return;
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    titleEl.blur();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    finishEdit(true);
+                }
+            });
+        });
+    }
+
+    function wirePanelSubtitleInlineEdit() {
+        document.querySelectorAll('.overview-panel-subtitle[data-panel-subtitle]').forEach(function (subtitleEl) {
+            if (subtitleEl.dataset.inlineWiredSubtitle === '1') return;
+            subtitleEl.dataset.inlineWiredSubtitle = '1';
+            var panelKey = subtitleEl.getAttribute('data-panel-subtitle');
+            if (!panelKey) return;
+            var original = subtitleEl.textContent.trim();
+            var saved = localStorage.getItem(subtitleStorageKey(panelKey));
+            if (saved && saved.trim() !== '') {
+                subtitleEl.textContent = saved;
+            }
+
+            function beginEdit() {
+                if (subtitleEl.isContentEditable) return;
+                subtitleEl.classList.add('overview-panel-subtitle--editing');
+                subtitleEl.contentEditable = 'true';
+                subtitleEl.dataset.originalSubtitle = subtitleEl.textContent.trim() || original;
+                var range = document.createRange();
+                range.selectNodeContents(subtitleEl);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+
+            function finishEdit(cancel) {
+                if (!subtitleEl.isContentEditable) return;
+                var fallback = subtitleEl.dataset.originalSubtitle || original;
+                var next = cancel ? fallback : subtitleEl.textContent.replace(/\s+/g, ' ').trim();
+                if (next === '') next = fallback;
+                subtitleEl.textContent = next;
+                subtitleEl.contentEditable = 'false';
+                subtitleEl.classList.remove('overview-panel-subtitle--editing');
+                localStorage.setItem(subtitleStorageKey(panelKey), next);
+                persistExtraPanels();
+            }
+
+            subtitleEl.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                beginEdit();
+            });
+            subtitleEl.addEventListener('blur', function () { finishEdit(false); });
+            subtitleEl.addEventListener('keydown', function (e) {
+                if (!subtitleEl.isContentEditable) return;
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    subtitleEl.blur();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    finishEdit(true);
+                }
+            });
+        });
+    }
+
+    function applyPanelOrder(stackEl) {
+        const raw = localStorage.getItem(prefix + 'panels');
+        if (!raw) return;
+        let ids = [];
+        try { ids = JSON.parse(raw); } catch (e) { return; }
+        if (!Array.isArray(ids)) return;
+        const nodes = Array.from(stackEl.children);
+        const map = new Map(nodes.map((n) => [n.getAttribute('data-panel-id'), n]));
+        ids.forEach((id) => {
+            const node = map.get(id);
+            if (node) stackEl.appendChild(node);
+        });
+    }
+
+    function getGridKey(gridEl) {
+        return gridEl.getAttribute('data-panel-key') || 'expense';
+    }
+
+    function initGrid(grid) {
+        if (!grid) return;
+        const key = getGridKey(grid);
+        applyOrder(grid, key);
+        ensureHandles(grid);
+        Sortable.create(grid, {
+            draggable: '.overview-tile-item',
+            handle: '.overview-tile-handle',
+            group: 'overview-panels',
+            animation: 170,
+            ghostClass: 'overview-sort-ghost',
+            chosenClass: 'overview-sort-chosen',
+            onStart: function () { dragMoved = false; },
+            onMove: function () { dragMoved = true; },
+            onEnd: function (evt) {
+                const targetGrid = evt.to;
+                const sourceGrid = evt.from;
+                if (sourceGrid) saveOrder(sourceGrid, getGridKey(sourceGrid));
+                if (targetGrid) saveOrder(targetGrid, getGridKey(targetGrid));
+                saveAllOrders();
+            }
+        });
+    }
+
+    function persistExtraPanels() {
+        const stack = document.getElementById('overview-panels-stack');
+        if (!stack) return;
+        const extras = Array.from(stack.querySelectorAll('.overview-panel-card[data-panel-extra="1"]')).map(function (card) {
+            const id = card.getAttribute('data-panel-id') || '';
+            const titleEl = card.querySelector('.overview-panel-title');
+            const subtitleEl = card.querySelector('.overview-panel-subtitle');
+            return {
+                id: id,
+                title: (titleEl ? titleEl.textContent : 'New panel').trim() || 'New panel',
+                subtitle: (subtitleEl ? subtitleEl.textContent : 'Drag items here').trim() || 'Drag items here',
+            };
+        }).filter(function (x) { return !!x.id; });
+        localStorage.setItem(extraPanelsStorageKey(), JSON.stringify(extras));
+    }
+
+    function createExtraPanelCard(panel) {
+        const panelId = panel.id;
+        const card = document.createElement('div');
+        card.className = 'card overview-panel-card';
+        card.setAttribute('data-panel-id', panelId);
+        card.setAttribute('data-panel-extra', '1');
+        card.style.cssText = 'max-width:100%;position:relative;';
+        card.innerHTML =
+            '<span class="overview-panel-handle" title="Drag panel"><i class="fa fa-grip-lines" aria-hidden="true"></i></span>' +
+            '<h2 class="overview-panel-title" data-panel-title="' + panelId + '" style="margin:0 0 8px;">' + panel.title + '</h2>' +
+            '<p class="muted overview-panel-subtitle" data-panel-subtitle="' + panelId + '" style="margin:0 0 14px;">' + panel.subtitle + '</p>' +
+            '<div class="overview-panel-grid" data-panel-key="' + panelId + '" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">' +
+            '<div class="overview-panel-empty">Drag items here</div>' +
+            '</div>';
+        return card;
+    }
+
+    function loadExtraPanels() {
+        const stack = document.getElementById('overview-panels-stack');
+        if (!stack) return;
+        const raw = localStorage.getItem(extraPanelsStorageKey());
+        if (!raw) return;
+        let panels = [];
+        try { panels = JSON.parse(raw); } catch (e) { return; }
+        if (!Array.isArray(panels)) return;
+        panels.forEach(function (panel) {
+            if (!panel || !panel.id) return;
+            if (stack.querySelector('[data-panel-id="' + panel.id + '"]')) return;
+            const card = createExtraPanelCard({
+                id: String(panel.id),
+                title: String(panel.title || 'New panel'),
+                subtitle: String(panel.subtitle || 'Drag items here')
+            });
+            stack.appendChild(card);
+            const grid = card.querySelector('.overview-panel-grid');
+            initGrid(grid);
+        });
+    }
+
+    function wireAddPanelButton() {
+        const btn = document.getElementById('overview-add-panel-btn');
+        const btnWrap = document.getElementById('overview-add-panel-wrap');
+        const stack = document.getElementById('overview-panels-stack');
+        if (!btn || !stack || !btnWrap) return;
+
+        function showAddPanelButton() {
+            btnWrap.style.display = 'flex';
+        }
+
+        stack.addEventListener('dblclick', function () {
+            showAddPanelButton();
+        });
+
+        btn.addEventListener('click', function () {
+            const id = 'custom-' + Date.now();
+            const card = createExtraPanelCard({
+                id: id,
+                title: 'New panel',
+                subtitle: 'Double-click title/description to edit. Drag items here.'
+            });
+            stack.appendChild(card);
+            const grid = card.querySelector('.overview-panel-grid');
+            initGrid(grid);
+            wirePanelTitleInlineEdit();
+            wirePanelSubtitleInlineEdit();
+            persistExtraPanels();
+            savePanelOrder(stack);
+        });
+    }
+
+    initGrid(document.getElementById('overview-expense-grid'));
+    initGrid(document.getElementById('overview-income-grid'));
+    loadExtraPanels();
+    const panelStack = document.getElementById('overview-panels-stack');
+    if (panelStack) {
+        applyPanelOrder(panelStack);
+        Sortable.create(panelStack, {
+            draggable: '.overview-panel-card',
+            handle: '.overview-panel-handle',
+            animation: 170,
+            ghostClass: 'overview-panel-sort-ghost',
+            onEnd: function () {
+                savePanelOrder(panelStack);
+                persistExtraPanels();
+            }
+        });
+    }
+    wirePanelTitleInlineEdit();
+    wirePanelSubtitleInlineEdit();
+    wireAddPanelButton();
+    document.addEventListener('click', function (e) {
+        if (!dragMoved) return;
+        dragMoved = false;
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
 })();
 </script>
 @endif

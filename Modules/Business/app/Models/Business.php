@@ -10,6 +10,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Account\Models\Bill;
 use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
+use Modules\FileManager\Models\FileManagerFile;
+use Modules\FileManager\Models\FileManagerFolder;
+use Modules\Product\Models\Product;
+use Modules\Product\Models\ProductBrand;
+use Modules\Product\Models\ProductCategory;
+use Modules\Product\Models\ProductUnit;
+use Modules\Purchase\Models\GoodsReceiveNote;
+use Modules\Purchase\Models\Purchase;
+use Modules\Purchase\Models\Supplier;
 use Modules\HRManagement\Models\AllowanceType;
 use Modules\HRManagement\Models\AttendanceRecord;
 use Modules\HRManagement\Models\Department;
@@ -100,6 +109,56 @@ class Business extends Model
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class)->orderBy('name');
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class)->orderBy('name');
+    }
+
+    public function productCategories(): HasMany
+    {
+        return $this->hasMany(ProductCategory::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function productBrands(): HasMany
+    {
+        return $this->hasMany(ProductBrand::class)->orderBy('name');
+    }
+
+    public function productUnits(): HasMany
+    {
+        return $this->hasMany(ProductUnit::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function suppliers(): HasMany
+    {
+        return $this->hasMany(Supplier::class)->orderBy('name');
+    }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(Purchase::class);
+    }
+
+    public function goodsReceiveNotes(): HasMany
+    {
+        return $this->hasMany(GoodsReceiveNote::class);
+    }
+
+    public function chequePayments(): HasMany
+    {
+        return $this->hasMany(\Modules\Purchase\Models\ChequePayment::class);
+    }
+
+    public function fileManagerFolders(): HasMany
+    {
+        return $this->hasMany(FileManagerFolder::class)->orderBy('name');
+    }
+
+    public function fileManagerFiles(): HasMany
+    {
+        return $this->hasMany(FileManagerFile::class)->orderByDesc('created_at');
     }
 
     public function employees(): HasMany

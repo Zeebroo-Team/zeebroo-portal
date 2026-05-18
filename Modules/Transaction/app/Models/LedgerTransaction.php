@@ -11,6 +11,8 @@ use Modules\Account\Models\Loan;
 use Modules\Account\Models\Rental;
 use Modules\Business\Models\Business;
 use Modules\HRManagement\Models\PayrollCycle;
+use Modules\Purchase\Models\GoodsReceiveNote;
+use Modules\Purchase\Models\Purchase;
 
 class LedgerTransaction extends Model
 {
@@ -72,6 +74,12 @@ class LedgerTransaction extends Model
         if ($subject instanceof PayrollCycle) {
             return 'Payroll';
         }
+        if ($subject instanceof Purchase) {
+            return 'Purchase';
+        }
+        if ($subject instanceof GoodsReceiveNote) {
+            return 'Goods receipt';
+        }
 
         return $this->transactionable_type
             ? class_basename($this->transactionable_type)
@@ -104,6 +112,12 @@ class LedgerTransaction extends Model
             $period = $subject->year.'-'.str_pad((string) $subject->month, 2, '0', STR_PAD_LEFT);
 
             return $name !== '' ? $name.' · '.$period : ('Payroll #'.$subject->getKey());
+        }
+        if ($subject instanceof Purchase) {
+            return $subject->po_number ?: ('PO #'.$subject->getKey());
+        }
+        if ($subject instanceof GoodsReceiveNote) {
+            return $subject->grn_number ?: ('GRN #'.$subject->getKey());
         }
 
         if ($subject !== null) {

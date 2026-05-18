@@ -8,5 +8,8 @@
     "HRManagement": true,
     "AIBot": true,
     "AppConnection": true,
-    "Modification": true
+    "Modification": true,
+    "Product": true,
+    "FileManager": true,
+    "Purchase": true
 }
