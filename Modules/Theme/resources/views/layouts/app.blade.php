@@ -154,6 +154,26 @@
         .menu-payroll-nested__sub a:hover i,.menu-payroll-nested__sub a.active i{color:var(--primary)}
         .content{padding:0;margin-left:297px;min-height:100vh;border-left:1px solid var(--border)}
         .content--minimal{margin-left:0;border-left:none;max-width:none;width:100%}
+        .content--pos-only .content-inner{padding:8px 10px 12px;max-width:100%}
+        .content--pos-only{min-height:100vh}
+        body.pos-walking-active{overflow:hidden;height:100%}
+        body.pos-walking-active .layout,body.pos-walking-active .content,body.pos-walking-active .content-inner{height:100vh;max-height:100vh;overflow:hidden}
+        body.pos-walking-active .content-inner{padding:0!important;max-width:100%}
+        body.pos-walking-active .pos-online__top,body.pos-walking-active .pos-page__top{position:fixed;top:0;left:0;right:0;z-index:300;margin:0;border-radius:0;border-left:0;border-right:0;border-top:0;box-shadow:0 4px 20px rgba(0,0,0,.18)}
+        body.pos-walking-active{--pos-walking-cart-w:min(320px,30vw);--pos-walking-sale-w:min(320px,28vw);}
+        body.pos-walking-active .pos-online__scroll,body.pos-walking-active .pos-page__scroll{margin-top:var(--pos-walking-top-h,52px);height:calc(100vh - var(--pos-walking-top-h,52px));max-height:calc(100vh - var(--pos-walking-top-h,52px));overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;}
+        body.pos-walking-active .pos-online__sale-body,body.pos-walking-active .pos-register__sale-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+        body.pos-walking-active .pos-online__sale-panel .pos-online__cart-list,body.pos-walking-active .pos-register__sale-panel .pos-cart-list{flex:1;min-height:60px;max-height:none;}
+        body.pos-walking-active .pos-online__body{flex:1;min-height:0;}
+        body.pos-walking-active .pos-online__browse,body.pos-walking-active .pos-register__browse{flex-shrink:0;background:color-mix(in srgb,var(--card) 96%,transparent);border-bottom:1px solid var(--border);}
+        body.pos-walking-active .pos-online__catalog-main{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;}
+        body.pos-walking-active .pos-online__grid-wrap,body.pos-walking-active .pos-register__catalog .pos-panel__body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+        body.pos-walking-active .pos-register__catalog .pos-products{max-height:none;}
+        body.pos-walking-active .pos-online__checkout-body,body.pos-walking-active .pos-fixed-cart > .pos-panel__body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:0;}
+        body.pos-walking-active .pos-layout{flex:1;min-height:0;}
+        body.pos-walking-active .pos-page__scroll .muted,body.pos-walking-active .pos-page__scroll > .pos-banner{display:none;}
+        body.pos-walking-active .pos-online--walking,body.pos-walking-active .pos-page--walking{height:100vh;max-height:100vh;overflow:hidden;margin:0;width:100%;max-width:100%}
+        body.pos-walking-active .pos-page--walking > .pcat-page-card{height:100%;padding:0!important;border:none;border-radius:0;background:transparent;box-shadow:none}
         .navbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:20}
         .navtitle{font-weight:700}
         .navmeta{color:var(--muted);font-size:14px}
@@ -229,12 +249,19 @@
         @media (max-width:900px){.sidebar{position:static;width:auto;height:auto;border-right:0;border-bottom:1px solid var(--border)}.content{margin-left:0;border-left:0}}
     </style>
 </head>
-<body>
+@php
+    $posWalkingCustomer = (bool) session('pos_walking_customer', true);
+    $posOnlyShell = $posWalkingCustomer && request()->routeIs('pos.online', 'pos.register', 'pos.checkout');
+@endphp
+<body @class(['pos-walking-active' => $posOnlyShell])>
 <div class="layout">
     @php
         $minimalAppShell = filter_var($minimalAppShell ?? false, FILTER_VALIDATE_BOOLEAN);
         $employeePortal = filter_var($employeePortal ?? false, FILTER_VALIDATE_BOOLEAN);
         $chatWorkspace = filter_var($chatWorkspace ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($posOnlyShell) {
+            $minimalAppShell = true;
+        }
         $navBusiness = \Modules\Business\Models\Business::currentForNavbar(auth()->user());
         $navBusinesses = \Modules\Business\Models\Business::allForNavbar(auth()->user());
         $showSidebarLoansLink = $navBusiness && $navBusiness->loans()->exists();
@@ -262,6 +289,10 @@
             || $showSidebarGrnLink
             || $showSidebarSuppliersLink
             || $showSidebarChequesLink;
+        $showSidebarPosRegisterLink = $navBusiness && Route::has('pos.online') && $navBusiness->products()->where('is_active', true)->where('is_bundle', false)->exists();
+        $showSidebarPosHubLink = $navBusiness && Route::has('pos.index');
+        $showSidebarPosSalesLink = $navBusiness && Route::has('pos.sales.index') && $navBusiness->sales()->exists();
+        $showSidebarPosSection = $showSidebarPosHubLink || $showSidebarPosRegisterLink || $showSidebarPosSalesLink;
         $showSidebarFilesLink = $navBusiness && (
             $navBusiness->fileManagerFiles()->exists() || $navBusiness->fileManagerFolders()->exists()
         );
@@ -317,6 +348,10 @@
             $showSidebarSuppliersLink = false;
             $showSidebarChequesLink = false;
             $showSidebarPurchaseSection = false;
+            $showSidebarPosRegisterLink = false;
+            $showSidebarPosHubLink = false;
+            $showSidebarPosSalesLink = false;
+            $showSidebarPosSection = false;
             $showSidebarFilesLink = false;
             $showSidebarPropertiesLink = false;
             $sidebarLoanDueHighlight = false;
@@ -430,6 +465,31 @@
                     @endif
                 </div>
             @endif
+            @if($showSidebarPosSection)
+                <div class="menu-group-title">
+                    <i class="fa fa-cash-register"></i><span>Sales</span>
+                </div>
+                <div class="submenu" aria-label="Point of sale">
+                    @if($showSidebarPosHubLink)
+                        <a href="{{ route('pos.index') }}" @class([
+                            'active' => request()->routeIs('pos.index'),
+                        ])><i class="fa fa-gauge-high"></i><span>Sales hub</span></a>
+                    @endif
+                    @if($showSidebarPosRegisterLink)
+                        <a href="{{ route('pos.online') }}" @class([
+                            'active' => request()->routeIs('pos.online', 'pos.checkout'),
+                        ])><i class="fa fa-store"></i><span>Online POS</span></a>
+                        <a href="{{ route('pos.register') }}" @class([
+                            'active' => request()->routeIs('pos.register'),
+                        ])><i class="fa fa-cash-register"></i><span>Register</span></a>
+                    @endif
+                    @if($showSidebarPosSalesLink)
+                        <a href="{{ route('pos.sales.index') }}" @class([
+                            'active' => request()->routeIs('pos.sales.*'),
+                        ])><i class="fa fa-receipt"></i><span>Sales history</span></a>
+                    @endif
+                </div>
+            @endif
             @if($showSidebarFilesLink && Route::has('filemanager.index'))
                 <a href="{{ route('filemanager.index') }}" class="{{ request()->routeIs('filemanager.*') ? 'active' : '' }}"><i class="fa fa-folder-open"></i><span>Files</span></a>
             @endif
@@ -496,7 +556,8 @@
         @endif
     </aside>
     @endunless
-    <main class="content{{ $minimalAppShell ? ' content--minimal' : '' }}{{ $chatWorkspace ? ' content--chat-workspace' : '' }}">
+    <main class="content{{ $minimalAppShell ? ' content--minimal' : '' }}{{ $posOnlyShell ? ' content--pos-only' : '' }}{{ $chatWorkspace ? ' content--chat-workspace' : '' }}">
+        @unless($posOnlyShell)
         <div class="navbar">
             <div>
                 <div class="navtitle">{{ $heading ?? 'Overview' }}</div>
@@ -548,6 +609,11 @@
                         </div>
                     </div>
                 @else
+                @if(!$posOnlyShell && request()->routeIs('pos.online', 'pos.register'))
+                    <button type="button" class="user-trigger" data-pos-settings-open title="POS settings" aria-label="POS settings">
+                        <i class="fa fa-gear" aria-hidden="true"></i>
+                    </button>
+                @endif
                 <div class="navchip">{{ now()->format('d M Y') }}</div>
                 @if($navBusiness)
                     <a href="{{ route('business.profile') }}" class="user-trigger nav-business-profile @if(request()->routeIs('business.profile')) nav-business-profile--active @endif" title="Business profile">
@@ -706,6 +772,7 @@
                 @endif
             </div>
         </div>
+        @endunless
         <div class="content-inner{{ $chatWorkspace ? ' content-inner--chat-workspace' : '' }}">
             @yield('content')
         </div>

@@ -555,10 +555,18 @@ html.wh-intro-html-noscroll,html.wh-intro-html-noscroll body{overflow:hidden;hei
         <h2 class="overview-panel-title" data-panel-title="income" style="margin:0 0 8px;">Hows your income?</h2>
         <p class="muted overview-panel-subtitle" data-panel-subtitle="income" style="margin:0 0 14px;">Monitor your revenue performance and growth metrics in one place.</p>
         <div id="overview-income-grid" class="overview-panel-grid" data-panel-key="income" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+            @if(Route::has('pos.online'))
+            <a class="overview-tile-item" data-tile-id="income-sales" href="{{ route('pos.online') }}" style="border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block;transition:border-color .2s ease;"
+                onmouseover="this.style.borderColor='color-mix(in srgb,var(--primary) 45%,var(--border))'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-weight:700;"><i class="fa fa-chart-line" style="margin-right:6px;"></i>Sales</div>
+                <div class="muted" style="font-size:12px;margin-top:4px;">Open the online retail POS terminal and track sales.</div>
+            </a>
+            @else
             <div class="overview-tile-item" data-tile-id="income-sales" style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-chart-line" style="margin-right:6px;"></i>Sales</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Track total sales trends and daily performance.</div>
             </div>
+            @endif
             <div class="overview-tile-item" data-tile-id="income-report" style="border:1px solid var(--border);border-radius:12px;padding:12px;">
                 <div style="font-weight:700;"><i class="fa fa-file-lines" style="margin-right:6px;"></i>Income Report</div>
                 <div class="muted" style="font-size:12px;margin-top:4px;">Review detailed income summaries by period.</div>

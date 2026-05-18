@@ -80,6 +80,9 @@ class LedgerTransaction extends Model
         if ($subject instanceof GoodsReceiveNote) {
             return 'Goods receipt';
         }
+        if ($subject instanceof \Modules\Pos\Models\Sale) {
+            return 'POS sale';
+        }
 
         return $this->transactionable_type
             ? class_basename($this->transactionable_type)
@@ -118,6 +121,9 @@ class LedgerTransaction extends Model
         }
         if ($subject instanceof GoodsReceiveNote) {
             return $subject->grn_number ?: ('GRN #'.$subject->getKey());
+        }
+        if ($subject instanceof \Modules\Pos\Models\Sale) {
+            return $subject->sale_number ?: ('Sale #'.$subject->getKey());
         }
 
         if ($subject !== null) {

@@ -38,4 +38,17 @@ class AccountService
         $new = round(((float) (string) $lockedAccount->current_balance) - $amount, 2);
         $lockedAccount->update(['current_balance' => $new]);
     }
+
+    /**
+     * Increment balance on an {@see Account} row that has already been selected with {@see lockForUpdate()} within the caller's transaction.
+     */
+    public function applyBalanceAddition(Account $lockedAccount, float $amount): void
+    {
+        if ($amount <= 0.0) {
+            return;
+        }
+
+        $new = round(((float) (string) $lockedAccount->current_balance) + $amount, 2);
+        $lockedAccount->update(['current_balance' => $new]);
+    }
 }

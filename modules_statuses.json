@@ -11,5 +11,6 @@
     "Modification": true,
     "Product": true,
     "FileManager": true,
-    "Purchase": true
+    "Purchase": true,
+    "Pos": true
 }
