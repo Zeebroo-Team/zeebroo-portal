@@ -10,6 +10,7 @@ use Modules\Business\Models\Business;
 use Modules\Pos\Models\Sale;
 use Modules\Pos\Models\SaleItem;
 use Modules\Product\Models\Product;
+use Modules\Product\Models\ProductStockLayer;
 
 class SaleService
 {
@@ -113,7 +114,10 @@ class SaleService
             foreach ($lines as $line) {
                 /** @var Product $product */
                 $product = $line['product'];
-                $allocations = $this->stockConsumption->consumeFifo($product, $line['quantity']);
+                $layerId = $line['product_stock_layer_id'] ?? null;
+                $allocations = $layerId !== null
+                    ? $this->stockConsumption->consumeFromLayer($product, (int) $layerId, $line['quantity'])
+                    : $this->stockConsumption->consumeFifo($product, $line['quantity']);
 
                 foreach ($allocations as $allocation) {
                     $lineTotal = round($allocation['quantity'] * $allocation['unit_sell_price'], 2);
@@ -230,8 +234,8 @@ class SaleService
     }
 
     /**
-     * @param  list<array{product_id: int, quantity: float|string}>  $items
-     * @return list<array{product: Product, quantity: float}>
+     * @param  list<array{product_id: int, quantity: float|string, product_stock_layer_id?: int|null}>  $items
+     * @return list<array{product: Product, quantity: float, product_stock_layer_id: ?int}>
      */
     private function normalizeCartItems(Business $business, array $items): array
     {
@@ -241,14 +245,26 @@ class SaleService
             ]);
         }
 
+        /** @var array<string, array{product_id: int, quantity: float, product_stock_layer_id: ?int}> $merged */
         $merged = [];
         foreach ($items as $row) {
             $productId = (int) ($row['product_id'] ?? 0);
             $quantity = (float) ($row['quantity'] ?? 0);
+            $layerId = isset($row['product_stock_layer_id']) && $row['product_stock_layer_id'] !== ''
+                ? (int) $row['product_stock_layer_id']
+                : null;
             if ($productId <= 0 || $quantity <= 0) {
                 continue;
             }
-            $merged[$productId] = ($merged[$productId] ?? 0.0) + $quantity;
+            $key = $productId.':'.($layerId ?? 'fifo');
+            if (! isset($merged[$key])) {
+                $merged[$key] = [
+                    'product_id' => $productId,
+                    'quantity' => 0.0,
+                    'product_stock_layer_id' => $layerId,
+                ];
+            }
+            $merged[$key]['quantity'] = round($merged[$key]['quantity'] + $quantity, 3);
         }
 
         if ($merged === []) {
@@ -258,9 +274,9 @@ class SaleService
         }
 
         $normalized = [];
-        foreach ($merged as $productId => $quantity) {
+        foreach ($merged as $row) {
             $product = Product::query()
-                ->whereKey($productId)
+                ->whereKey($row['product_id'])
                 ->where('business_id', $business->id)
                 ->where('is_active', true)
                 ->where('is_bundle', false)
@@ -272,9 +288,25 @@ class SaleService
                 ]);
             }
 
+            $layerId = $row['product_stock_layer_id'];
+            if ($layerId !== null) {
+                $layerValid = ProductStockLayer::query()
+                    ->whereKey($layerId)
+                    ->where('product_id', $product->id)
+                    ->where('business_id', $business->id)
+                    ->where('quantity_remaining', '>', 0)
+                    ->exists();
+                if (! $layerValid) {
+                    throw ValidationException::withMessages([
+                        'items' => 'One or more stock batches are invalid or out of stock for '.$product->name.'.',
+                    ]);
+                }
+            }
+
             $normalized[] = [
                 'product' => $product,
-                'quantity' => round($quantity, 3),
+                'quantity' => round((float) $row['quantity'], 3),
+                'product_stock_layer_id' => $layerId,
             ];
         }
 

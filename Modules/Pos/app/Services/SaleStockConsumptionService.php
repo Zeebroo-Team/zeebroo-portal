@@ -25,6 +25,55 @@ class SaleStockConsumptionService
      *     unit_sell_price: float,
      * }>
      */
+    public function consumeFromLayer(Product $product, int $layerId, float $quantity): array
+    {
+        if ($quantity <= self::QTY_TOLERANCE) {
+            throw ValidationException::withMessages([
+                'items' => 'Quantity must be greater than zero.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($product, $layerId, $quantity) {
+            $product = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $product->loadMissing('business');
+
+            $layer = ProductStockLayer::query()
+                ->whereKey($layerId)
+                ->where('product_id', $product->id)
+                ->where('business_id', $product->business_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($layer === null) {
+                throw ValidationException::withMessages([
+                    'items' => 'The selected stock batch is not available for '.$product->name.'.',
+                ]);
+            }
+
+            $available = (float) $layer->quantity_remaining;
+            if ($available + self::QTY_TOLERANCE < $quantity) {
+                throw ValidationException::withMessages([
+                    'items' => 'Not enough stock in the selected batch for '.$product->name
+                        .'. Available in batch: '.number_format($available, 3, '.', '').'.',
+                ]);
+            }
+
+            $sellPrice = $this->resolveLayerSellPrice($product, $layer);
+            $layer->quantity_remaining = round(max(0, $available - $quantity), 3);
+            $layer->save();
+
+            $product->stock_quantity = max(0.0, round((float) $product->stock_quantity - $quantity, 3));
+            $product->save();
+
+            return [[
+                'product_stock_layer_id' => (int) $layer->id,
+                'quantity' => round($quantity, 3),
+                'unit_cost' => round((float) $layer->unit_cost, 2),
+                'unit_sell_price' => $sellPrice,
+            ]];
+        });
+    }
+
     public function consumeFifo(Product $product, float $quantity): array
     {
         if ($quantity <= self::QTY_TOLERANCE) {

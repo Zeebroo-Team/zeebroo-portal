@@ -18,6 +18,16 @@
     $formatQty = static function (float $value): string {
         return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
     };
+    $posProductCatalog = collect($products)->keyBy('id')->map(static function (array $p): array {
+        return [
+            'id' => $p['id'],
+            'name' => $p['name'],
+            'sku' => $p['sku'] ?? '',
+            'layers' => $p['layers'] ?? [],
+            'unit_sell_price' => $p['unit_sell_price'],
+            'stock_quantity' => $p['stock_quantity'],
+        ];
+    })->all();
 @endphp
 <style>
 .pos-page{max-width:100%;margin:0;}
@@ -99,6 +109,7 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
                 <button type="button" class="pos-btn" data-pos-add-product-open title="Add product" aria-label="Add product"><i class="fa fa-plus"></i></button>
                 @include('pos::partials.pos-settings-modal', ['posSettings' => $posSettings, 'accounts' => $accounts, 'hasAccounts' => $hasAccounts])
                 @include('pos::partials.pos-keyboard-shortcuts')
+                @include('pos::partials.pos-fullscreen-button')
                 @include('pos::partials.walking-customer-toggle')
             </div>
         </div>
@@ -162,6 +173,7 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
                                 data-product-sku="{{ e($product['sku'] ?? '') }}"
                                 data-unit-price="{{ $price !== null ? number_format((float) $price, 2, '.', '') : '0' }}"
                                 data-stock="{{ $formatQty((float) $product['stock_quantity']) }}"
+                                data-product-layers='@json($product['layers'] ?? [])'
                                 @if($outOfStock) disabled @endif
                             >
                                 @if($product['image_url'])
@@ -173,10 +185,19 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
                                 <span class="pos-product__meta">
                                     @if(filled($product['sku'])){{ $product['sku'] }} · @endif
                                     Stock {{ $formatQty((float) $product['stock_quantity']) }}
-                                    @if($product['has_layers']) · batch price @endif
+                                    @if(!empty($product['layer_count']) && (int) $product['layer_count'] > 1)
+                                        · {{ (int) $product['layer_count'] }} batches
+                                    @elseif($product['has_layers'])
+                                        · batch
+                                    @endif
                                 </span>
                                 <span class="pos-product__price">
-                                    @if($price !== null)
+                                    @if(!empty($product['has_multiple_prices']) && count($product['layers'] ?? []) > 1)
+                                        @php
+                                            $prices = collect($product['layers'])->pluck('unit_sell_price')->map(fn ($p) => (float) $p);
+                                        @endphp
+                                        {{ number_format($prices->min(), 2) }}–{{ number_format($prices->max(), 2) }}{{ filled($currency) ? ' '.$currency : '' }}
+                                    @elseif($price !== null)
                                         {{ number_format((float) $price, 2) }}{{ filled($currency) ? ' '.$currency : '' }}
                                     @else
                                         <span class="muted">No price</span>
@@ -225,13 +246,17 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
 </div>
 
 @include('pos::partials.pos-add-product-modal', ['productUnits' => $productUnits ?? collect(), 'currency' => $currency])
+@include('pos::partials.pos-stock-layer-picker', ['currency' => $currency])
+@include('pos::partials.pos-cart-layers-script')
 
 @once
 @include('pos::partials.beep-audio')
 <script>
 (function () {
     const currencySuffix = @json(filled($currency) ? ' '.$currency : '');
+    const posProductCatalog = @json($posProductCatalog);
     const cart = new Map();
+    window.initPosStockLayerPicker({ currencySuffix: currencySuffix });
     const productsEl = document.getElementById('pos-products');
     const cartItemsEl = document.getElementById('pos-cart-items');
     const cartEmptyEl = document.getElementById('pos-cart-empty');
@@ -276,7 +301,7 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
 
             const wrap = document.createElement('div');
             wrap.className = 'pos-cart-row';
-            wrap.dataset.cartRow = String(row.id);
+            wrap.dataset.cartRow = row.cartKey;
             wrap.innerHTML =
                 '<div>' +
                     '<div class="pos-cart-row__name"></div>' +
@@ -289,8 +314,10 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
                 '</div>';
 
             wrap.querySelector('.pos-cart-row__name').textContent = row.name;
-            wrap.querySelector('.pos-cart-row__sub').textContent =
-                (row.sku ? row.sku + ' · ' : '') + money(row.unitPrice) + ' each · stock ' + row.stock;
+            let subLine = (row.sku ? row.sku + ' · ' : '') + money(row.unitPrice) + ' each';
+            if (row.layerLabel) subLine += ' · ' + row.layerLabel;
+            subLine += ' · stock ' + row.stock;
+            wrap.querySelector('.pos-cart-row__sub').textContent = subLine;
 
             const qtyInput = wrap.querySelector('[data-qty]');
             qtyInput.value = String(row.quantity);
@@ -311,10 +338,19 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
             qtyHidden.setAttribute('form', 'pos-checkout-form');
             wrap.appendChild(qtyHidden);
 
+            if (row.layerId) {
+                const layerInput = document.createElement('input');
+                layerInput.type = 'hidden';
+                layerInput.name = 'items[' + index + '][product_stock_layer_id]';
+                layerInput.value = String(row.layerId);
+                layerInput.setAttribute('form', 'pos-checkout-form');
+                wrap.appendChild(layerInput);
+            }
+
             qtyInput.addEventListener('change', function () {
                 let qty = parseFloat(qtyInput.value);
                 if (!Number.isFinite(qty) || qty <= 0) {
-                    cart.delete(row.id);
+                    cart.delete(row.cartKey);
                     renderCart();
                     return;
                 }
@@ -329,7 +365,7 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
             });
 
             wrap.querySelector('[data-remove]').addEventListener('click', function () {
-                cart.delete(row.id);
+                cart.delete(row.cartKey);
                 renderCart();
             });
 
@@ -352,31 +388,13 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
     productsEl?.addEventListener('click', function (event) {
         const btn = event.target.closest('[data-pos-product]');
         if (!btn || btn.disabled) return;
-
-        const id = parseInt(btn.dataset.productId, 10);
-        const existing = cart.get(id);
-        const stock = parseFloat(btn.dataset.stock) || 0;
-        const unitPrice = parseFloat(btn.dataset.unitPrice) || 0;
-
-        if (existing) {
-            if (existing.quantity + 1 > stock) return;
-            existing.quantity += 1;
-        } else {
-            if (stock <= 0) return;
-            cart.set(id, {
-                id: id,
-                name: btn.dataset.productName || 'Product',
-                sku: btn.dataset.productSku || '',
-                unitPrice: unitPrice,
-                quantity: 1,
-                stock: stock,
-            });
-        }
-
-        renderCart();
-        if (typeof window.playPosBeep === 'function') {
-            window.playPosBeep();
-        }
+        void window.posAddProductFromButton(btn, cart, posProductCatalog).then(function (added) {
+            if (!added) return;
+            renderCart();
+            if (typeof window.playPosBeep === 'function') {
+                window.playPosBeep();
+            }
+        });
     });
 
     clearBtn?.addEventListener('click', clearCart);
@@ -407,28 +425,13 @@ body.pos-walking-active .pos-page__top-search .pos-search button{padding:6px 8px
         gridVariant: 'register',
         storeUrl: @json(route('pos.products.store')),
         onProductAdded: function (btn) {
-            const id = parseInt(btn.dataset.productId, 10);
-            const stock = parseFloat(btn.dataset.stock) || 0;
-            const unitPrice = parseFloat(btn.dataset.unitPrice) || 0;
-            if (stock <= 0) return;
-            const existing = cart.get(id);
-            if (existing) {
-                if (existing.quantity + 1 > stock) return;
-                existing.quantity += 1;
-            } else {
-                cart.set(id, {
-                    id: id,
-                    name: btn.dataset.productName || 'Product',
-                    sku: btn.dataset.productSku || '',
-                    unitPrice: unitPrice,
-                    quantity: 1,
-                    stock: stock,
-                });
-            }
-            renderCart();
-            if (typeof window.playPosBeep === 'function') {
-                window.playPosBeep();
-            }
+            void window.posAddProductFromButton(btn, cart, posProductCatalog).then(function (added) {
+                if (!added) return;
+                renderCart();
+                if (typeof window.playPosBeep === 'function') {
+                    window.playPosBeep();
+                }
+            });
         },
     });
     renderCart();

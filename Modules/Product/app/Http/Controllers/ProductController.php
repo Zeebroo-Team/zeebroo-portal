@@ -17,6 +17,7 @@ use Modules\Product\Services\ProductService;
 use Modules\Product\Services\ProductImageService;
 use Modules\Product\Services\ProductSkuGeneratorService;
 use Modules\Product\Services\ProductStockActivityService;
+use Modules\Product\Services\ProductSalesChartService;
 use Modules\Product\Services\ProductStockLayerService;
 
 class ProductController extends Controller
@@ -29,6 +30,7 @@ class ProductController extends Controller
         private readonly ProductBundleService $productBundleService,
         private readonly ProductStockActivityService $productStockActivity,
         private readonly ProductStockLayerService $productStockLayers,
+        private readonly ProductSalesChartService $productSalesChart,
     ) {
     }
 
@@ -137,6 +139,12 @@ class ProductController extends Controller
         $stockActivity = $this->productStockActivity->forProduct($product);
         $stockSellingMarkupPercent = (float) get_settings('product.stock_selling_markup_percent', 25, $business);
 
+        $salesPeriod = (string) $request->query('sales_period', 'weekly');
+        if (! in_array($salesPeriod, ['daily', 'weekly', 'monthly'], true)) {
+            $salesPeriod = 'weekly';
+        }
+        $salesChart = $this->productSalesChart->build($product, $salesPeriod);
+
         return view('product::products.show', array_merge([
             'business' => $business,
             'product' => $product,
@@ -144,6 +152,8 @@ class ProductController extends Controller
             'activeTab' => $activeTab,
             'stockView' => $stockView,
             'stockSellingMarkupPercent' => $stockSellingMarkupPercent,
+            'salesChart' => $salesChart,
+            'salesPeriod' => $salesPeriod,
         ], $stockActivity));
     }
 

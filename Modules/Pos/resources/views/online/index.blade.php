@@ -23,6 +23,16 @@
             'q' => filled($search) ? $search : null,
         ], fn ($v) => $v !== null && $v !== '');
     };
+    $posProductCatalog = collect($products)->keyBy('id')->map(static function (array $p): array {
+        return [
+            'id' => $p['id'],
+            'name' => $p['name'],
+            'sku' => $p['sku'] ?? '',
+            'layers' => $p['layers'] ?? [],
+            'unit_sell_price' => $p['unit_sell_price'],
+            'stock_quantity' => $p['stock_quantity'],
+        ];
+    })->all();
 @endphp
 <style>
 .pos-online{max-width:100%;margin:0;display:flex;flex-direction:column;gap:0;}
@@ -77,9 +87,9 @@
 .pos-online__cart-empty{margin:0;padding:20px 12px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:10px;}
 .pos-online__line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--card) 96%,transparent);}
 .pos-online__line__name{font-size:13px;font-weight:700;color:var(--text);}
-.pos-online__line__sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.pos-online__line__sub{font-size:10px;color:var(--muted);margin-top:2px;word-break:break-word;}
 .pos-online__line__ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
-.pos-online__line__ctrl input{width:68px;padding:6px 8px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--text);text-align:center;box-sizing:border-box;}
+.pos-online__line__ctrl input{width:76px;padding:6px 8px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--text);text-align:center;box-sizing:border-box;}
 .pos-online__line__rm{width:28px;height:28px;padding:0;border:1px solid color-mix(in srgb,#ef4444 40%,var(--border));border-radius:7px;background:transparent;color:#f87171;cursor:pointer;}
 .pos-online__total{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-bottom:10px;font-size:18px;font-weight:800;color:var(--text);}
 .pos-online__field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;}
@@ -131,6 +141,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
             <button type="button" class="pos-online__link" data-pos-add-product-open title="Add product" aria-label="Add product"><i class="fa fa-plus" aria-hidden="true"></i></button>
             @include('pos::partials.pos-settings-modal', ['posSettings' => $posSettings, 'accounts' => $accounts, 'hasAccounts' => $hasAccounts])
             @include('pos::partials.pos-keyboard-shortcuts')
+            @include('pos::partials.pos-fullscreen-button')
             @include('pos::partials.walking-customer-toggle')
             @unless($posWalkingCustomer)
                 <a href="{{ route('pos.index') }}" class="pos-online__link" title="Hub"><i class="fa fa-gauge-high"></i></a>
@@ -196,6 +207,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
                             data-product-sku="{{ e($product['sku'] ?? '') }}"
                             data-unit-price="{{ $product['unit_sell_price'] !== null ? number_format((float) $product['unit_sell_price'], 2, '.', '') : '0' }}"
                             data-stock="{{ $formatQty((float) $product['stock_quantity']) }}"
+                            data-product-layers='@json($product['layers'] ?? [])'
                             @if($outOfStock) disabled @endif
                         >
                             @if($product['image_url'])
@@ -206,9 +218,19 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
                             <span class="pos-online__item__name">{{ $product['name'] }}</span>
                             <span class="pos-online__item__meta">
                                 {{ filled($product['sku'] ?? null) ? $product['sku'].' · ' : '' }}{{ $formatQty((float) $product['stock_quantity']) }} in stock
+                                @if(!empty($product['layer_count']) && (int) $product['layer_count'] > 1)
+                                    · {{ (int) $product['layer_count'] }} batches
+                                @endif
                             </span>
                             <span class="pos-online__item__price">
-                                @if($product['unit_sell_price'] !== null)
+                                @if(!empty($product['has_multiple_prices']) && count($product['layers'] ?? []) > 1)
+                                    @php
+                                        $prices = collect($product['layers'])->pluck('unit_sell_price')->map(fn ($p) => (float) $p);
+                                        $minP = $prices->min();
+                                        $maxP = $prices->max();
+                                    @endphp
+                                    {{ number_format($minP, 2) }}–{{ number_format($maxP, 2) }}{{ filled($currency) ? ' '.$currency : '' }}
+                                @elseif($product['unit_sell_price'] !== null)
                                     {{ number_format((float) $product['unit_sell_price'], 2) }}{{ filled($currency) ? ' '.$currency : '' }}
                                 @else
                                     —
@@ -255,6 +277,8 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
 </div>
 
 @include('pos::partials.pos-add-product-modal', ['productUnits' => $productUnits ?? collect(), 'currency' => $currency])
+@include('pos::partials.pos-stock-layer-picker', ['currency' => $currency])
+@include('pos::partials.pos-cart-layers-script')
 
 @once
 @include('pos::partials.beep-audio')
@@ -262,7 +286,10 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
 (function () {
     const currencySuffix = @json(filled($currency) ? ' '.$currency : '');
     const productsBySku = @json(collect($products)->filter(fn ($p) => filled($p['sku'] ?? null))->keyBy('sku'));
+    const posProductCatalog = @json($posProductCatalog);
     const cart = new Map();
+
+    window.initPosStockLayerPicker({ currencySuffix: currencySuffix });
 
     const productsEl = document.getElementById('pos-online-products');
     const skuInput = document.getElementById('pos-sku-scan');
@@ -284,26 +311,9 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
         return Number(n || 0).toFixed(2) + currencySuffix;
     }
 
-    function addProductFromButton(btn) {
-        if (!btn || btn.disabled) return false;
-        const id = parseInt(btn.dataset.productId, 10);
-        const stock = parseFloat(btn.dataset.stock) || 0;
-        const unitPrice = parseFloat(btn.dataset.unitPrice) || 0;
-        const existing = cart.get(id);
-        if (existing) {
-            if (existing.quantity + 1 > stock) return false;
-            existing.quantity += 1;
-        } else {
-            if (stock <= 0) return false;
-            cart.set(id, {
-                id: id,
-                name: btn.dataset.productName || 'Product',
-                sku: btn.dataset.productSku || '',
-                unitPrice: unitPrice,
-                quantity: 1,
-                stock: stock,
-            });
-        }
+    async function addProductFromButton(btn) {
+        const added = await window.posAddProductFromButton(btn, cart, posProductCatalog);
+        if (!added) return false;
         renderCart();
         if (typeof window.playPosBeep === 'function') {
             window.playPosBeep();
@@ -311,7 +321,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
         return true;
     }
 
-    function addBySku(rawSku) {
+    async function addBySku(rawSku) {
         const sku = String(rawSku || '').trim();
         if (!sku) return;
         const card = productsBySku[sku];
@@ -321,31 +331,30 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
         }
         const btn = productsEl?.querySelector('[data-product-id="' + card.id + '"]');
         if (btn) {
-            addProductFromButton(btn);
+            await addProductFromButton(btn);
             return;
         }
-        const stock = parseFloat(card.stock_quantity) || 0;
-        const unitPrice = parseFloat(card.unit_sell_price) || 0;
-        const id = parseInt(card.id, 10);
-        const existing = cart.get(id);
-        let added = false;
-        if (existing) {
-            if (existing.quantity + 1 <= stock) {
-                existing.quantity += 1;
-                added = true;
-            }
-        } else if (stock > 0) {
-            cart.set(id, {
-                id: id,
-                name: card.name,
-                sku: card.sku || '',
-                unitPrice: unitPrice,
-                quantity: 1,
-                stock: stock,
-            });
-            added = true;
+        const catalogCard = posProductCatalog[card.id] || card;
+        const layers = catalogCard.layers || card.layers || [];
+        let layer = null;
+        if (layers.length > 1) {
+            layer = await window.posPickStockLayer({ id: card.id, name: card.name }, layers);
+            if (!layer) return;
+        } else if (layers.length) {
+            layer = layers[0];
         }
-        if (added) {
+        const line = {
+            cartKey: window.posCartKey(card.id, layer ? layer.id : null),
+            id: parseInt(card.id, 10),
+            layerId: layer ? parseInt(layer.id, 10) : null,
+            layerLabel: layer ? (layer.label || '') : '',
+            name: card.name,
+            sku: card.sku || '',
+            unitPrice: layer ? parseFloat(layer.unit_sell_price) : parseFloat(card.unit_sell_price) || 0,
+            quantity: 0,
+            stock: layer ? parseFloat(layer.quantity_remaining) : parseFloat(card.stock_quantity) || 0,
+        };
+        if (window.posAddCartLine(cart, line, 1)) {
             renderCart();
             if (typeof window.playPosBeep === 'function') {
                 window.playPosBeep();
@@ -374,7 +383,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
             subtotal += lineTotal;
             const wrap = document.createElement('div');
             wrap.className = 'pos-online__line';
-            wrap.dataset.cartRow = String(row.id);
+            wrap.dataset.cartRow = row.cartKey;
             wrap.innerHTML =
                 '<div><div class="pos-online__line__name"></div><div class="pos-online__line__sub"></div></div>' +
                 '<div class="pos-online__line__ctrl">' +
@@ -383,8 +392,9 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
                     '<button type="button" class="pos-online__line__rm" data-remove aria-label="Remove">&times;</button>' +
                 '</div>';
             wrap.querySelector('.pos-online__line__name').textContent = row.name;
-            wrap.querySelector('.pos-online__line__sub').textContent =
-                (row.sku ? row.sku + ' · ' : '') + money(row.unitPrice) + ' each';
+            let subLine = (row.sku ? row.sku + ' · ' : '') + money(row.unitPrice) + ' each';
+            if (row.layerLabel) subLine += ' · ' + row.layerLabel;
+            wrap.querySelector('.pos-online__line__sub').textContent = subLine;
             const qtyInput = wrap.querySelector('[data-qty]');
             qtyInput.value = String(row.quantity);
             wrap.querySelector('[data-line-total]').textContent = money(lineTotal);
@@ -400,10 +410,18 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
             qtyHidden.value = String(row.quantity);
             qtyHidden.setAttribute('form', 'pos-checkout-form');
             wrap.appendChild(qtyHidden);
+            if (row.layerId) {
+                const layerInput = document.createElement('input');
+                layerInput.type = 'hidden';
+                layerInput.name = 'items[' + index + '][product_stock_layer_id]';
+                layerInput.value = String(row.layerId);
+                layerInput.setAttribute('form', 'pos-checkout-form');
+                wrap.appendChild(layerInput);
+            }
             qtyInput.addEventListener('change', function () {
                 let qty = parseFloat(qtyInput.value);
                 if (!Number.isFinite(qty) || qty <= 0) {
-                    cart.delete(row.id);
+                    cart.delete(row.cartKey);
                     renderCart();
                     return;
                 }
@@ -413,7 +431,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
                 renderCart();
             });
             wrap.querySelector('[data-remove]').addEventListener('click', function () {
-                cart.delete(row.id);
+                cart.delete(row.cartKey);
                 renderCart();
             });
             cartItemsEl.appendChild(wrap);
@@ -433,11 +451,11 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
 
     productsEl?.addEventListener('click', function (event) {
         const btn = event.target.closest('[data-pos-product]');
-        if (btn) addProductFromButton(btn);
+        if (btn) void addProductFromButton(btn);
     });
 
     skuBtn?.addEventListener('click', function () {
-        addBySku(skuInput?.value);
+        void addBySku(skuInput?.value);
         if (skuInput) skuInput.value = '';
         skuInput?.focus();
     });
@@ -445,7 +463,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
     skuInput?.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
             event.preventDefault();
-            addBySku(skuInput.value);
+            void addBySku(skuInput.value);
             skuInput.value = '';
         }
     });
@@ -479,7 +497,7 @@ body.pos-walking-active .pos-online__top-fields .pos-online__scan-row button{pad
         gridVariant: 'online',
         storeUrl: @json(route('pos.products.store')),
         onProductAdded: function (btn) {
-            addProductFromButton(btn);
+            void addProductFromButton(btn);
         },
     });
     renderCart();

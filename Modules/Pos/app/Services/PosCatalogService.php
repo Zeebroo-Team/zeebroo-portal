@@ -65,21 +65,7 @@ class PosCatalogService
     public function productCardsForPos(Business $business, ?string $search = null, ?int $categoryId = null): array
     {
         return $this->sellableProducts($business, $search, $categoryId)
-            ->map(function (Product $product) {
-                $meta = $this->posMetaForProduct($product);
-
-                return [
-                    'id' => (int) $product->id,
-                    'name' => $product->name,
-                    'sku' => $product->sku,
-                    'unit' => $product->productUnit?->name ?: $product->unit,
-                    'image_url' => $product->imageUrl(),
-                    'unit_sell_price' => $meta['unit_sell_price'],
-                    'stock_quantity' => $meta['stock_quantity'],
-                    'has_layers' => $meta['has_layers'],
-                    'category_ids' => $product->categories->pluck('id')->map(fn ($id) => (int) $id)->all(),
-                ];
-            })
+            ->map(fn (Product $product) => $this->productCardForProduct($product))
             ->values()
             ->all();
     }
@@ -89,8 +75,14 @@ class PosCatalogService
      */
     public function productCardForProduct(Product $product): array
     {
-        $product->loadMissing(['productUnit', 'imageFile', 'categories']);
+        $product->loadMissing(['productUnit', 'imageFile', 'categories', 'business']);
+        $layers = $this->sellableLayersForProduct($product);
         $meta = $this->posMetaForProduct($product);
+        $defaultLayer = $layers[0] ?? null;
+        $sellPrices = array_values(array_unique(array_map(
+            static fn (array $layer) => number_format((float) $layer['unit_sell_price'], 2, '.', ''),
+            $layers,
+        )));
 
         return [
             'id' => (int) $product->id,
@@ -98,11 +90,67 @@ class PosCatalogService
             'sku' => $product->sku,
             'unit' => $product->productUnit?->name ?: $product->unit,
             'image_url' => $product->imageUrl(),
-            'unit_sell_price' => $meta['unit_sell_price'],
+            'unit_sell_price' => $defaultLayer['unit_sell_price'] ?? $meta['unit_sell_price'],
             'stock_quantity' => $meta['stock_quantity'],
-            'has_layers' => $meta['has_layers'],
+            'has_layers' => $layers !== [],
+            'layer_count' => count($layers),
+            'requires_layer_pick' => count($layers) > 1,
+            'has_multiple_prices' => count($sellPrices) > 1,
+            'layers' => $layers,
             'category_ids' => $product->categories->pluck('id')->map(fn ($id) => (int) $id)->all(),
         ];
+    }
+
+    /**
+     * @return list<array{
+     *     id: int,
+     *     label: string,
+     *     quantity_remaining: float,
+     *     unit_cost: float,
+     *     unit_sell_price: float,
+     *     received_at: ?string,
+     * }>
+     */
+    public function sellableLayersForProduct(Product $product): array
+    {
+        $product->loadMissing('business');
+
+        $layers = ProductStockLayer::query()
+            ->where('product_id', $product->id)
+            ->where('business_id', $product->business_id)
+            ->where('quantity_remaining', '>', 0)
+            ->with(['goodsReceiveNoteItem.goodsReceiveNote'])
+            ->orderBy('received_at')
+            ->orderBy('id')
+            ->get();
+
+        $out = [];
+        foreach ($layers as $layer) {
+            $sell = $layer->selling_unit_price !== null
+                ? (float) $layer->selling_unit_price
+                : ($this->stockLayers->defaultSellingUnitPrice(
+                    $product->business,
+                    $product,
+                    (float) $layer->unit_cost,
+                ) ?? (float) $layer->unit_cost);
+
+            $grn = $layer->goodsReceiveNoteItem?->goodsReceiveNote;
+            $label = $layer->received_at?->format('M j, Y') ?? ('Batch #'.$layer->id);
+            if ($grn?->grn_number) {
+                $label .= ' · '.$grn->grn_number;
+            }
+
+            $out[] = [
+                'id' => (int) $layer->id,
+                'label' => $label,
+                'quantity_remaining' => round((float) $layer->quantity_remaining, 3),
+                'unit_cost' => round((float) $layer->unit_cost, 2),
+                'unit_sell_price' => round($sell, 2),
+                'received_at' => $layer->received_at?->toDateString(),
+            ];
+        }
+
+        return $out;
     }
 
     public function findSellableProductBySku(Business $business, string $sku): ?Product

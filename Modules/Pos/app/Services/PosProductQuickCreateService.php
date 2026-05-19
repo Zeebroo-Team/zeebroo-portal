@@ -9,6 +9,7 @@ use Modules\Business\Models\Business;
 use Modules\Product\Models\Product;
 use Modules\Product\Services\ProductCatalogOptionsService;
 use Modules\Product\Services\ProductService;
+use Modules\Product\Services\ProductStockLayerService;
 
 class PosProductQuickCreateService
 {
@@ -16,6 +17,7 @@ class PosProductQuickCreateService
         private readonly ProductService $productService,
         private readonly ProductCatalogOptionsService $catalogOptions,
         private readonly PosCatalogService $posCatalog,
+        private readonly ProductStockLayerService $stockLayers,
     ) {
     }
 
@@ -27,11 +29,14 @@ class PosProductQuickCreateService
     {
         $validated = $this->validate($business, $input);
 
+        $openingStock = (float) ($validated['stock_quantity'] ?? 0);
+        $unitPrice = (float) ($validated['unit_price'] ?? 0);
+
         $data = $this->catalogOptions->normalizeProductCatalogFields($business, [
             'name' => $validated['name'],
             'sku' => $validated['sku'] ?? null,
-            'unit_price' => $validated['unit_price'] ?? null,
-            'stock_quantity' => $validated['stock_quantity'] ?? 0,
+            'unit_price' => $unitPrice,
+            'stock_quantity' => 0,
             'product_unit_id' => $validated['product_unit_id'] ?? null,
             'product_category_ids' => [],
             'product_brand_ids' => [],
@@ -40,6 +45,16 @@ class PosProductQuickCreateService
         ]);
 
         $product = $this->productService->create($business, $data);
+
+        if ($openingStock > 0) {
+            $this->stockLayers->createManualLayer(
+                $business,
+                $product,
+                $openingStock,
+                $unitPrice,
+                $unitPrice,
+            );
+        }
 
         return $this->posCatalog->productCardForProduct($product->fresh([
             'productUnit',

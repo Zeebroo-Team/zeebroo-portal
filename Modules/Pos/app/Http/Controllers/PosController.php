@@ -67,6 +67,7 @@ class PosController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'min:1'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.001'],
+            'items.*.product_stock_layer_id' => ['nullable', 'integer', 'min:1'],
             'payment_method' => ['required', 'string', 'in:cash,card,credit'],
             'channel' => ['nullable', 'string', 'in:retail,online'],
             'credit_account_id' => [

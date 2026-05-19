@@ -160,7 +160,7 @@
         body.pos-walking-active .layout,body.pos-walking-active .content,body.pos-walking-active .content-inner{height:100vh;max-height:100vh;overflow:hidden}
         body.pos-walking-active .content-inner{padding:0!important;max-width:100%}
         body.pos-walking-active .pos-online__top,body.pos-walking-active .pos-page__top{position:fixed;top:0;left:0;right:0;z-index:300;margin:0;border-radius:0;border-left:0;border-right:0;border-top:0;box-shadow:0 4px 20px rgba(0,0,0,.18)}
-        body.pos-walking-active{--pos-walking-cart-w:min(320px,30vw);--pos-walking-sale-w:min(320px,28vw);}
+        body.pos-walking-active{--pos-walking-cart-w:min(320px,30vw);--pos-walking-sale-w:min(400px,34vw);}
         body.pos-walking-active .pos-online__scroll,body.pos-walking-active .pos-page__scroll{margin-top:var(--pos-walking-top-h,52px);height:calc(100vh - var(--pos-walking-top-h,52px));max-height:calc(100vh - var(--pos-walking-top-h,52px));overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;}
         body.pos-walking-active .pos-online__sale-body,body.pos-walking-active .pos-register__sale-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
         body.pos-walking-active .pos-online__sale-panel .pos-online__cart-list,body.pos-walking-active .pos-register__sale-panel .pos-cart-list{flex:1;min-height:60px;max-height:none;}

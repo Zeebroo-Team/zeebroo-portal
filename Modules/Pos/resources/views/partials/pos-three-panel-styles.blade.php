@@ -3,7 +3,7 @@
 /* Three-panel POS: left = sale, center = browse/products, right = checkout */
 .pos-three-panel{display:grid;gap:10px;flex:1;min-height:0;width:100%;}
 @media (min-width:960px){
-    .pos-three-panel{grid-template-columns:minmax(280px,340px) minmax(0,1fr) minmax(280px,340px);align-items:stretch;gap:10px;}
+    .pos-three-panel{grid-template-columns:minmax(360px,440px) minmax(0,1fr) minmax(280px,340px);align-items:stretch;gap:10px;}
 }
 .pos-three-panel__left,.pos-three-panel__center,.pos-three-panel__right{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card);}
 .pos-three-panel__center{border-radius:12px;}

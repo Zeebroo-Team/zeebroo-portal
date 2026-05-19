@@ -3,7 +3,16 @@
 @section('content')
 @php
     $activeTab = $activeTab ?? 'overview';
-    $productTabUrl = fn (string $tab) => route('product.show', ['product' => $product, 'tab' => $tab]);
+    $productTabUrl = fn (string $tab) => route('product.show', array_filter([
+        'product' => $product,
+        'tab' => $tab,
+        'sales_period' => $tab === 'overview' ? ($salesPeriod ?? request('sales_period', 'weekly')) : null,
+    ], fn ($v) => $v !== null && $v !== ''));
+    $productOverviewUrl = fn (string $period) => route('product.show', [
+        'product' => $product,
+        'tab' => 'overview',
+        'sales_period' => $period,
+    ]);
     $galleryCount = $product->productImages->count() + ($product->imageFile && $product->productImages->isEmpty() ? 1 : 0);
 @endphp
 @include('product::partials.catalog-hub-styles')
@@ -67,6 +76,25 @@
 .product-show-gallery{display:flex;flex-wrap:wrap;gap:10px;}
 .product-show-gallery__item img{width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border);}
 .product-show-desc{margin:0;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;}
+.product-sales-chart{
+    margin:0 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;
+    background:color-mix(in srgb,var(--card) 96%,transparent);
+}
+.product-sales-chart__head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.product-sales-chart__title{margin:0;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--text);}
+.product-sales-chart__sub{margin:4px 0 0;font-size:12px;}
+.product-sales-chart__periods{display:flex;flex-wrap:wrap;gap:6px;}
+.product-sales-chart__period{
+    padding:6px 12px;font-size:11px;font-weight:700;border-radius:999px;border:1px solid var(--border);
+    background:color-mix(in srgb,var(--card) 92%,transparent);color:var(--muted);text-decoration:none;
+}
+.product-sales-chart__period:hover{color:var(--text);border-color:color-mix(in srgb,var(--primary) 40%,var(--border));}
+.product-sales-chart__period.is-active{
+    color:var(--text);border-color:color-mix(in srgb,var(--primary) 45%,var(--border));
+    background:color-mix(in srgb,var(--primary) 12%,transparent);
+}
+.product-sales-chart__total{margin:0 0 10px;font-size:12px;}
+.product-sales-chart__empty{margin:0;padding:24px 12px;text-align:center;font-size:13px;line-height:1.5;border:1px dashed var(--border);border-radius:10px;}
 .product-stock-summary{
     display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 14px;
 }
@@ -195,6 +223,12 @@
     </nav>
 
     <section class="product-show-panel" @if($activeTab !== 'overview') hidden @endif>
+        @include('product::products.partials.product-sales-chart', [
+            'salesChart' => $salesChart ?? [],
+            'salesPeriod' => $salesPeriod ?? 'weekly',
+            'productOverviewUrl' => $productOverviewUrl,
+        ])
+
         <dl class="product-show-overview-grid">
             <div>
                 <dt>SKU</dt>

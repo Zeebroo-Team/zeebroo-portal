@@ -178,6 +178,8 @@ window.initPosAddProductModal = function (options) {
         btn.dataset.productSku = sku;
         btn.dataset.unitPrice = unitPrice;
         btn.dataset.stock = stockLabel;
+        btn.dataset.productLayers = JSON.stringify(product.layers || []);
+        btn.dataset.requiresLayerPick = product.requires_layer_pick ? '1' : '0';
 
         if (gridVariant === 'register') {
             btn.className = 'pos-product' + (outOfStock ? ' is-disabled' : '');
@@ -200,7 +202,8 @@ window.initPosAddProductModal = function (options) {
             name.textContent = product.name;
             const meta = document.createElement('span');
             meta.className = 'pos-product__meta';
-            meta.textContent = (sku ? sku + ' · ' : '') + 'Stock ' + stockLabel;
+            meta.textContent = (sku ? sku + ' · ' : '') + 'Stock ' + stockLabel
+                + (product.layer_count > 1 ? ' · ' + product.layer_count + ' batches' : '');
             const price = document.createElement('span');
             price.className = 'pos-product__price';
             price.textContent = product.unit_sell_price != null
@@ -227,7 +230,8 @@ window.initPosAddProductModal = function (options) {
             name.textContent = product.name;
             const meta = document.createElement('span');
             meta.className = 'pos-online__item__meta';
-            meta.textContent = (sku ? sku + ' · ' : '') + stockLabel + ' in stock';
+            meta.textContent = (sku ? sku + ' · ' : '') + stockLabel + ' in stock'
+                + (product.layer_count > 1 ? ' · ' + product.layer_count + ' batches' : '');
             const price = document.createElement('span');
             price.className = 'pos-online__item__price';
             price.textContent = product.unit_sell_price != null

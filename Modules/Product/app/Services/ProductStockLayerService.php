@@ -176,6 +176,39 @@ class ProductStockLayerService
             });
     }
 
+    public function createManualLayer(
+        Business $business,
+        Product $product,
+        float $quantity,
+        float $unitCost,
+        ?float $sellingUnitPrice = null,
+    ): ProductStockLayer {
+        if ($quantity <= 0) {
+            throw ValidationException::withMessages([
+                'stock_quantity' => 'Quantity must be greater than zero.',
+            ]);
+        }
+
+        $unitCost = round(max(0, $unitCost), 2);
+        $sell = $this->resolveSellingUnitPrice($business, $product, $unitCost, $sellingUnitPrice);
+
+        $layer = ProductStockLayer::query()->create([
+            'business_id' => $business->id,
+            'product_id' => $product->id,
+            'goods_receive_note_item_id' => null,
+            'quantity_received' => round($quantity, 3),
+            'quantity_remaining' => round($quantity, 3),
+            'unit_cost' => $unitCost,
+            'selling_unit_price' => $sell,
+            'received_at' => now()->toDateString(),
+        ]);
+
+        $product->stock_quantity = round((float) $product->stock_quantity + $quantity, 3);
+        $product->save();
+
+        return $layer;
+    }
+
     public function updateSellingPrice(ProductStockLayer $layer, float $sellingUnitPrice): ProductStockLayer
     {
         $layer->selling_unit_price = round(max(0, $sellingUnitPrice), 2);
