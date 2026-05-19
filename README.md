@@ -7,6 +7,16 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Modules as Git submodules
+
+Laravel modules under `Modules/` and the Qt client `pos_desktop/` are maintained as **separate Git repositories** and linked into this app as submodules.
+
+- **Docs:** [docs/MODULE_SUBMODULES.md](docs/MODULE_SUBMODULES.md)
+- **Clone with modules:** `git clone --recurse-submodules git@github.com:Zeebroo-Team/zeebroo-portal.git`
+- **Setup scripts:** `scripts/git-submodules/`
+
+Module source branches on this repo (for publishing): `module/pos`, `module/pos-desktop`, etc.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

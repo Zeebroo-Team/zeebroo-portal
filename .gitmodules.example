@@ -1,0 +1,46 @@
+# Copy to .gitmodules after publishing module repos (see docs/MODULE_SUBMODULES.md)
+[submodule "Modules/Auth"]
+	path = Modules/Auth
+	url = git@github.com:Zeebroo-Team/zeebroo-module-auth.git
+[submodule "Modules/Theme"]
+	path = Modules/Theme
+	url = git@github.com:Zeebroo-Team/zeebroo-module-theme.git
+[submodule "Modules/Business"]
+	path = Modules/Business
+	url = git@github.com:Zeebroo-Team/zeebroo-module-business.git
+[submodule "Modules/Account"]
+	path = Modules/Account
+	url = git@github.com:Zeebroo-Team/zeebroo-module-account.git
+[submodule "Modules/Settings"]
+	path = Modules/Settings
+	url = git@github.com:Zeebroo-Team/zeebroo-module-settings.git
+[submodule "Modules/Transaction"]
+	path = Modules/Transaction
+	url = git@github.com:Zeebroo-Team/zeebroo-module-transaction.git
+[submodule "Modules/HRManagement"]
+	path = Modules/HRManagement
+	url = git@github.com:Zeebroo-Team/zeebroo-module-hrmanagement.git
+[submodule "Modules/AIBot"]
+	path = Modules/AIBot
+	url = git@github.com:Zeebroo-Team/zeebroo-module-aibot.git
+[submodule "Modules/AppConnection"]
+	path = Modules/AppConnection
+	url = git@github.com:Zeebroo-Team/zeebroo-module-appconnection.git
+[submodule "Modules/Modification"]
+	path = Modules/Modification
+	url = git@github.com:Zeebroo-Team/zeebroo-module-modification.git
+[submodule "Modules/Product"]
+	path = Modules/Product
+	url = git@github.com:Zeebroo-Team/zeebroo-module-product.git
+[submodule "Modules/FileManager"]
+	path = Modules/FileManager
+	url = git@github.com:Zeebroo-Team/zeebroo-module-filemanager.git
+[submodule "Modules/Purchase"]
+	path = Modules/Purchase
+	url = git@github.com:Zeebroo-Team/zeebroo-module-purchase.git
+[submodule "Modules/Pos"]
+	path = Modules/Pos
+	url = git@github.com:Zeebroo-Team/zeebroo-module-pos.git
+[submodule "pos_desktop"]
+	path = pos_desktop
+	url = git@github.com:Zeebroo-Team/zeebroo-pos-desktop.git
