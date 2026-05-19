@@ -1,0 +1,3 @@
+[submodule "pos_desktop"]
+	path = pos_desktop
+	url = https://github.com/Zeebroo-Team/pos-desktop.git
