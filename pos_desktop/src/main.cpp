@@ -10,7 +10,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QApplication::setOrganizationName(QStringLiteral("Socibiz"));
+    QApplication::setOrganizationName(QStringLiteral("Zeebroo"));
     QApplication::setApplicationName(QStringLiteral("PosDesktop"));
 
     QFile styleFile(QStringLiteral(":/styles.qss"));

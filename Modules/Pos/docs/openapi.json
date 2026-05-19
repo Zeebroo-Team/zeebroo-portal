@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Socibiz POS Online API",
+    "title": "Zeebroo POS Online API",
     "description": "REST API for the online POS terminal: catalog, cart checkout, quick product create, settings, and sales.\n\n## Authentication\n1. `POST /api/v1/pos/auth/token` with email and password to receive a Bearer token.\n2. Send `Authorization: Bearer {access_token}` on all protected routes.\n\n## Business scope\nMost endpoints require a business context. Send either:\n- Header `X-Business-Id: {id}` (recommended for mobile apps), or\n- Query `business_id={id}`\n\nIf omitted, the API uses the user's session-selected business (web) or latest business.\n",
     "version": "1.0.0"
   },

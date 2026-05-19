@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(SocibizPosDesktop VERSION 1.0.0 LANGUAGES CXX)
+project(ZeebrooPosDesktop VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia PrintSupport)
 
-qt_add_executable(SocibizPosDesktop
+qt_add_executable(ZeebrooPosDesktop
     src/main.cpp
     src/core/Config.cpp
     src/core/Models.cpp
@@ -25,9 +25,9 @@ qt_add_executable(SocibizPosDesktop
     resources/resources.qrc
 )
 
-target_include_directories(SocibizPosDesktop PRIVATE src)
+target_include_directories(ZeebrooPosDesktop PRIVATE src)
 
-target_link_libraries(SocibizPosDesktop PRIVATE
+target_link_libraries(ZeebrooPosDesktop PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
@@ -37,7 +37,7 @@ target_link_libraries(SocibizPosDesktop PRIVATE
 )
 
 if(WIN32)
-    set_target_properties(SocibizPosDesktop PROPERTIES WIN32_EXECUTABLE TRUE)
+    set_target_properties(ZeebrooPosDesktop PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
-install(TARGETS SocibizPosDesktop RUNTIME DESTINATION bin)
+install(TARGETS ZeebrooPosDesktop RUNTIME DESTINATION bin)

@@ -70,7 +70,7 @@ MainWindow::MainWindow(ApiClient *api, QWidget *parent)
     : QMainWindow(parent)
     , m_api(api)
 {
-    setWindowTitle(tr("Socibiz POS"));
+    setWindowTitle(tr("Zeebroo POS"));
     resize(1280, 800);
     buildUi();
     connect(&m_cart, &Cart::changed, this, &MainWindow::onCartChanged);

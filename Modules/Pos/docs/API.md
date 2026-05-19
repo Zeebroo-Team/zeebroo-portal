@@ -215,10 +215,10 @@ The **Qt 6 desktop client** lives in the [`pos_desktop`](../../../pos_desktop) g
 - Repository: [github.com/Zeebroo-Team/pos-desktop](https://github.com/Zeebroo-Team/pos-desktop)
 - Same REST API as this document
 
-### Clone Socibiz with the submodule
+### Clone Zeebroo with the submodule
 
 ```bash
-git clone --recurse-submodules https://github.com/your-org/socibiz.git
+git clone --recurse-submodules https://github.com/Zeebroo-Team/zeebroo-portal.git
 # or, after a normal clone:
 git submodule update --init --recursive
 ```
@@ -230,4 +230,4 @@ cd pos_desktop
 # see pos_desktop/README.md for build steps (CMake + Qt 6)
 ```
 
-To bump the pinned submodule commit in Socibiz: commit inside `pos_desktop`, push to `pos-desktop`, then in the parent repo run `git add pos_desktop` and commit the updated submodule pointer.
+To bump the pinned submodule commit in Zeebroo: commit inside `pos_desktop`, push to `pos-desktop`, then in the parent repo run `git add pos_desktop` and commit the updated submodule pointer.

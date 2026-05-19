@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="public/logo.png" alt="Socibiz" width="220" />
+  <img src="public/logo.png" alt="Zeebroo" width="220" />
 </p>
 
-<h1 align="center">Socibiz POS Desktop</h1>
+<h1 align="center">Zeebroo POS Desktop</h1>
 
 <p align="center">
-  Qt 6 desktop point-of-sale client for <strong>Socibiz</strong>.<br>
+  Qt 6 desktop point-of-sale client for <strong>Zeebroo</strong>.<br>
   Uses the same REST API as the web <strong>Online POS</strong> (<code>Modules/Pos</code>).
 </p>
 
@@ -16,7 +16,7 @@
   ·
   <a href="#deploy">Deploy</a>
   ·
-  <a href="#git-submodule-socibiz">Submodule</a>
+  <a href="#git-submodule-zeebroo">Submodule</a>
 </p>
 
 ---
@@ -38,31 +38,31 @@
 | **Qt** | 6.x (Core, Gui, Widgets, Network, Multimedia, PrintSupport) |
 | **CMake** | 3.21+ |
 | **Compiler** | C++17 |
-| **Backend** | Running **Socibiz** Laravel app with POS API (`laravel/sanctum`, POS module routes) |
+| **Backend** | Running **Zeebroo** Laravel app with POS API (`laravel/sanctum`, POS module routes) |
 
 ---
 
-## Git submodule (Socibiz)
+## Git submodule (Zeebroo)
 
-This repository is designed to live inside the main Socibiz monorepo at **`pos_desktop/`** as a git submodule.
+This repository is designed to live inside the main Zeebroo monorepo at **`pos_desktop/`** as a git submodule.
 
-### Clone Socibiz with the desktop client
+### Clone Zeebroo with the desktop client
 
 ```bash
-git clone --recurse-submodules https://github.com/Zeebroo-Team/socibiz.git
-cd socibiz
+git clone --recurse-submodules https://github.com/Zeebroo-Team/zeebroo-portal.git
+cd zeebroo-portal
 ```
 
-If you already cloned Socibiz without submodules:
+If you already cloned Zeebroo without submodules:
 
 ```bash
-cd socibiz
+cd zeebroo-portal
 git submodule update --init --recursive
 ```
 
-### Add this repo as a submodule (new Socibiz checkout)
+### Add this repo as a submodule (new Zeebroo checkout)
 
-From the root of your Socibiz clone:
+From the root of your Zeebroo clone:
 
 ```bash
 git submodule add https://github.com/Zeebroo-Team/pos-desktop.git pos_desktop
@@ -103,16 +103,16 @@ git commit -m "Pin pos_desktop to v1.0.0."
 
 ## Deploy
 
-### 1. Deploy the Socibiz backend
+### 1. Deploy the Zeebroo backend
 
-The desktop app does **not** bundle the API. Deploy Socibiz first so these are available:
+The desktop app does **not** bundle the API. Deploy Zeebroo first so these are available:
 
 - HTTPS base URL for your app (e.g. `https://pos.example.com`)
 - POS API routes under `/api/v1/pos`
 - Sanctum personal access tokens for terminal sign-in
 - POS module enabled and configured (accounts, products, stock layers)
 
-API reference (in Socibiz): `Modules/Pos/docs/API.md`  
+API reference (in Zeebroo): `Modules/Pos/docs/API.md`  
 Interactive docs: `GET https://your-app.test/api/v1/pos/docs`
 
 ### 2. Build the desktop binary
@@ -120,7 +120,7 @@ Interactive docs: `GET https://your-app.test/api/v1/pos/docs`
 On the machine that will run the terminal (or your build server):
 
 ```bash
-cd pos_desktop   # or socibiz/pos_desktop when used as a submodule
+cd pos_desktop   # or zeebroo-portal/pos_desktop when used as a submodule
 
 cmake -B build \
   -DCMAKE_BUILD_TYPE=Release \
@@ -135,12 +135,12 @@ cmake --build build --config Release
 brew install qt cmake
 ```
 
-**Output:** `build/SocibizPosDesktop` (macOS/Linux) or `build/Release/SocibizPosDesktop.exe` (Windows, depending on generator).
+**Output:** `build/ZeebrooPosDesktop` (macOS/Linux) or `build/Release/ZeebrooPosDesktop.exe` (Windows, depending on generator).
 
 Optional install to a system path:
 
 ```bash
-cmake --install build --prefix /opt/socibiz-pos
+cmake --install build --prefix /opt/zeebroo-pos
 ```
 
 ### 3. Configure the terminal
@@ -156,9 +156,9 @@ Copy `config.example.json` and set your production API URL:
 
 | Platform | Config file location |
 |----------|----------------------|
-| **macOS** | `~/Library/Application Support/Socibiz/PosDesktop/config.json` |
-| **Linux** | `~/.config/Socibiz/PosDesktop/config.json` (typical) |
-| **Windows** | `%APPDATA%/Socibiz/PosDesktop/config.json` (typical) |
+| **macOS** | `~/Library/Application Support/Zeebroo/PosDesktop/config.json` |
+| **Linux** | `~/.config/Zeebroo/PosDesktop/config.json` (typical) |
+| **Windows** | `%APPDATA%/Zeebroo/PosDesktop/config.json` (typical) |
 
 You can also place `config.json` next to the executable, or set the API URL on the sign-in screen.
 
@@ -167,13 +167,13 @@ Use a unique `device_name` per physical terminal (shown in Sanctum token list).
 ### 4. Run in production
 
 ```bash
-./build/SocibizPosDesktop
+./build/ZeebrooPosDesktop
 ```
 
 **Checklist**
 
 - [ ] Backend URL uses **HTTPS** in production
-- [ ] Firewall allows outbound HTTPS from the terminal to the Socibiz host
+- [ ] Firewall allows outbound HTTPS from the terminal to the Zeebroo host
 - [ ] Staff user has access to the target business (`X-Business-Id` is set automatically after login)
 - [ ] Cash/card checkout accounts exist in POS settings
 - [ ] Thermal printer installed and selected in the OS print dialog when printing receipts
@@ -182,7 +182,7 @@ Use a unique `device_name` per physical terminal (shown in Sanctum token list).
 
 1. Build and test a new binary from an updated `pos_desktop` commit or tag.
 2. Distribute the executable (or installer) to each store machine.
-3. If Socibiz uses the submodule, bump `pos_desktop` in the parent repo so developers stay in sync.
+3. If Zeebroo uses the submodule, bump `pos_desktop` in the parent repo so developers stay in sync.
 
 ---
 
@@ -208,7 +208,7 @@ Use a unique `device_name` per physical terminal (shown in Sanctum token list).
 cd pos_desktop
 cmake -B build -DCMAKE_PREFIX_PATH="$(qtpaths6 --install-prefix 2>/dev/null || echo /opt/homebrew/opt/qt)"
 cmake --build build
-./build/SocibizPosDesktop
+./build/ZeebrooPosDesktop
 ```
 
 ---
@@ -217,8 +217,8 @@ cmake --build build
 
 | Resource | Location |
 |----------|----------|
-| OpenAPI / Swagger UI | `GET /api/v1/pos/docs` on your Socibiz host |
-| Markdown guide | `Modules/Pos/docs/API.md` in the Socibiz repo |
+| OpenAPI / Swagger UI | `GET /api/v1/pos/docs` on your Zeebroo host |
+| Markdown guide | `Modules/Pos/docs/API.md` in the Zeebroo repo |
 
 Authenticated requests send `Authorization: Bearer {token}` and `X-Business-Id` after login.
 
@@ -256,5 +256,5 @@ pos_desktop/
 
 | Repo | Role |
 |------|------|
-| [Zeebroo-Team/socibiz](https://github.com/Zeebroo-Team/socibiz) | Laravel application; hosts POS API |
+| [Zeebroo-Team/zeebroo-portal](https://github.com/Zeebroo-Team/zeebroo-portal) | Laravel application; hosts POS API |
 | [Zeebroo-Team/pos-desktop](https://github.com/Zeebroo-Team/pos-desktop) | This Qt desktop client (submodule at `pos_desktop/`) |

@@ -1,8 +1,8 @@
 @php
-    $__socibizUiThemesAllowed = ['night', 'light', 'light_blue', 'ocean', 'night_blue'];
-    $__socibizUiThemeStored = auth()->check() ? get_settings('ui.theme', 'light') : null;
-    $__ui_theme = ($__socibizUiThemeStored !== null && in_array((string) $__socibizUiThemeStored, $__socibizUiThemesAllowed, true))
-        ? (string) $__socibizUiThemeStored
+    $__zeebrooUiThemesAllowed = ['night', 'light', 'light_blue', 'ocean', 'night_blue'];
+    $__zeebrooUiThemeStored = auth()->check() ? get_settings('ui.theme', 'light') : null;
+    $__ui_theme = ($__zeebrooUiThemeStored !== null && in_array((string) $__zeebrooUiThemeStored, $__zeebrooUiThemesAllowed, true))
+        ? (string) $__zeebrooUiThemeStored
         : 'light';
 @endphp
 <!doctype html>
@@ -749,8 +749,8 @@
                                     @csrf
                                     <input type="hidden" name="scope" value="user"/>
                                     <input type="hidden" name="key" value="ui.theme"/>
-                                    <label for="socibizNavThemeSel" style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;"><i class="fa fa-palette" style="margin-right:6px;"></i>Color theme</label>
-                                    <select name="value" id="socibizNavThemeSel" class="dropdown-select" onchange="this.form.submit()" style="width:100%;">
+                                    <label for="zeebrooNavThemeSel" style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;"><i class="fa fa-palette" style="margin-right:6px;"></i>Color theme</label>
+                                    <select name="value" id="zeebrooNavThemeSel" class="dropdown-select" onchange="this.form.submit()" style="width:100%;">
                                         <option value="night" @selected($__ui_theme === 'night')>Night — violet</option>
                                         <option value="light" @selected($__ui_theme === 'light')>Light — amber &amp; black</option>
                                         <option value="light_blue" @selected($__ui_theme === 'light_blue')>Light — blue &amp; white</option>

@@ -17,13 +17,13 @@ class AuthLoginSeeder extends Seeder
         Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
         $admin = User::updateOrCreate(
-            ['email' => 'admin@socibiz.test'],
+            ['email' => 'admin@zeebroo.test'],
             ['name' => 'System Admin', 'password' => 'password123']
         );
         $admin->syncRoles(['admin']);
 
         $user = User::updateOrCreate(
-            ['email' => 'user@socibiz.test'],
+            ['email' => 'user@zeebroo.test'],
             ['name' => 'Demo User', 'password' => 'password123']
         );
         $user->syncRoles(['user']);

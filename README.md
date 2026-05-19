@@ -1,58 +1,294 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="public/logo.png" alt="Zeebroo" width="220" />
 </p>
 
-## About Laravel
+<h1 align="center">Zeebroo</h1>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  Multi-business operations platform built on <strong>Laravel</strong> with modular domains for POS, products, accounting, HR, and more.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+<p align="center">
+  <a href="#requirements">Requirements</a>
+  ·
+  <a href="#installation">Installation</a>
+  ·
+  <a href="#git-submodules">Submodules</a>
+  ·
+  <a href="#deployment">Deployment</a>
+  ·
+  <a href="#pos-online--desktop">POS</a>
+</p>
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## About
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Zeebroo is a modular Laravel application (`nwidart/laravel-modules`) for running one or more businesses: inventory, sales, purchases, accounts, staff, file management, and point-of-sale workflows.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Area | Module |
+|------|--------|
+| Authentication & permissions | `Auth` |
+| Businesses & branches | `Business` |
+| Products & catalog | `Product` |
+| Point of sale | `Pos` |
+| Sales & purchases | `Transaction`, `Purchase` |
+| Accounting | `Account` |
+| HR | `HRManagement` |
+| Settings & theme | `Settings`, `Theme` |
+| Files & AI | `FileManager`, `AIBot` |
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## Requirements
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+| Tool | Version |
+|------|---------|
+| **PHP** | 8.3+ |
+| **Composer** | 2.x |
+| **Database** | MySQL / MariaDB / PostgreSQL / SQLite |
+| **Node.js** | Optional — UI is maintained without a frontend build step for most changes |
+
+For the **Qt POS desktop client**, see the [`pos_desktop`](#git-submodules) submodule (Qt 6, CMake 3.21+).
+
+---
+
+## Installation
+
+### 1. Clone with submodules
+
+```bash
+git clone --recurse-submodules git@github.com:Zeebroo-Team/zeebroo-portal.git zeebroo-portal
+cd zeebroo-portal
+```
+
+If you already cloned without submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+HTTPS:
+
+```bash
+git clone --recurse-submodules https://github.com/Zeebroo-Team/zeebroo-portal.git zeebroo-portal
+cd zeebroo-portal
+```
+
+### 2. PHP dependencies
+
+```bash
+composer install
+```
+
+### 3. Environment
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Configure database, `APP_URL`, mail, and other values in `.env`.
+
+### 4. Database
+
+```bash
+php artisan migrate
+# optional:
+php artisan db:seed
+```
+
+### 5. Storage link
+
+```bash
+php artisan storage:link
+```
+
+### 6. Run locally
+
+```bash
+php artisan serve
+```
+
+Open `APP_URL` in your browser and sign in with your seeded or created user.
+
+---
+
+## Git submodules
+
+### `pos_desktop` — Qt POS terminal
+
+The desktop point-of-sale app is a separate repository included as a submodule:
+
+| | |
+|--|--|
+| **Path** | `pos_desktop/` |
+| **Remote** | [github.com/Zeebroo-Team/pos-desktop](https://github.com/Zeebroo-Team/pos-desktop) |
+| **Docs** | [`pos_desktop/README.md`](pos_desktop/README.md) |
+
+#### Initialize or update
+
+```bash
+git submodule update --init --recursive
+```
+
+#### Pull latest desktop client
+
+```bash
+cd pos_desktop
+git fetch origin
+git checkout main
+git pull origin main
+cd ..
+git add pos_desktop
+git commit -m "Bump pos_desktop submodule."
+```
+
+#### Add submodule to another fork (first time)
+
+```bash
+git submodule add https://github.com/Zeebroo-Team/pos-desktop.git pos_desktop
+git submodule update --init --recursive
+```
+
+If HTTPS clone fails in your environment, use SSH:
+
+```bash
+git config submodule.pos_desktop.url git@github.com:Zeebroo-Team/pos-desktop.git
+git submodule sync pos_desktop
+git submodule update --init pos_desktop
+```
+
+---
+
+## Deployment
+
+### Web application (Laravel)
+
+1. **Server** — PHP 8.3+, Composer, web server (Nginx/Apache) or `php-fpm`, database, Redis optional for cache/queues.
+2. **Code** — deploy the repo **with submodules**:
+   ```bash
+   git clone --recurse-submodules git@github.com:Zeebroo-Team/zeebroo-portal.git
+   cd zeebroo-portal   # or your deploy path
+   ```
+3. **Install**
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   cp .env.example .env   # or use your secrets manager
+   php artisan key:generate
+   php artisan migrate --force
+   php artisan storage:link
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+4. **Permissions** — `storage/` and `bootstrap/cache/` writable by the web user.
+5. **Scheduler & queue** (if used):
+   ```bash
+   * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+   php artisan queue:work
+   ```
+6. **HTTPS** — set `APP_URL` to your production URL; force TLS at the proxy.
+
+### POS API (for web Online POS & desktop)
+
+- Routes live under `/api/v1/pos` (Sanctum bearer tokens).
+- Interactive API docs: `GET /api/v1/pos/docs`
+- Markdown reference: [`Modules/Pos/docs/API.md`](Modules/Pos/docs/API.md)
+
+Ensure `laravel/sanctum` is configured and staff can authenticate before pointing terminals at the API.
+
+### POS desktop terminals
+
+Deploy the **backend first**, then build and distribute the Qt client from `pos_desktop/`:
+
+```bash
+cd pos_desktop
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+Full build, config paths, and production checklist: **[`pos_desktop/README.md`](pos_desktop/README.md#deploy)**.
+
+Example terminal config (`config.json`):
+
+```json
+{
+  "api_base_url": "https://your-domain.com/api/v1/pos",
+  "device_name": "pos-desktop-1"
+}
+```
+
+---
+
+## POS (Online & desktop)
+
+| Client | Where | Notes |
+|--------|--------|--------|
+| **Web Online POS** | `/pos/online` (session auth) | Browser terminal in the Zeebroo UI |
+| **REST API** | `/api/v1/pos/*` | Same business logic; used by mobile and desktop |
+| **Desktop (Qt)** | `pos_desktop/` submodule | [pos-desktop](https://github.com/Zeebroo-Team/pos-desktop) repo |
+
+---
+
+## Development
+
+### Code style
+
+```bash
+./vendor/bin/pint
+```
+
+### Tests
+
+```bash
+php artisan test
+# or
+./vendor/bin/pest
+```
+
+### Module commands
+
+```bash
+php artisan module:list
+php artisan module:make ModelName ModuleName
+```
+
+### AI-assisted development (optional)
+
+[Laravel Boost](https://laravel.com/docs/ai) can be installed for agent tooling:
 
 ```bash
 composer require laravel/boost --dev
-
 php artisan boost:install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## Project structure
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```
+zeebroo-portal/
+  app/                 Application core
+  Modules/             Feature modules (Pos, Product, Business, …)
+  public/
+    logo.png           Brand logo (README & app assets)
+  pos_desktop/         Git submodule — Qt POS desktop client
+  resources/           Shared views/assets
+  routes/              Web & API entry routes
+```
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Related repositories
 
-## Security Vulnerabilities
+| Repository | Description |
+|------------|-------------|
+| [Zeebroo-Team/zeebroo-portal](https://github.com/Zeebroo-Team/zeebroo-portal) | This Laravel application |
+| [Zeebroo-Team/pos-desktop](https://github.com/Zeebroo-Team/pos-desktop) | Qt 6 POS desktop client (`pos_desktop/` submodule) |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The Laravel framework components remain under the [MIT license](https://opensource.org/licenses/MIT). Application licensing is defined by the project owners.

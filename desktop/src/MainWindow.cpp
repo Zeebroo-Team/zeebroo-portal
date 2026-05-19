@@ -187,7 +187,7 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
     applyOfficeLikeChrome();
-    setWindowTitle(tr("Document1 — Socibiz"));
+    setWindowTitle(tr("Document1 — Zeebroo"));
 
     QWidget* chrome = buildTitleChrome(this, this, &m_docTitle);
     m_docTitle->setText(tr("Document1 — recovered"));

@@ -15,8 +15,8 @@ int main(int argc, char* argv[])
     app.setStyle(QStringLiteral("Fusion"));
 #endif
 
-    QApplication::setApplicationName(QStringLiteral("Socibiz Desktop"));
-    QApplication::setOrganizationName(QStringLiteral("Socibiz"));
+    QApplication::setApplicationName(QStringLiteral("Zeebroo Desktop"));
+    QApplication::setOrganizationName(QStringLiteral("Zeebroo"));
 
     MainWindow window;
     window.resize(1180, 720);

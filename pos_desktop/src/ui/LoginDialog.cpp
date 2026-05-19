@@ -19,14 +19,14 @@ LoginDialog::LoginDialog(ApiClient *api, QWidget *parent)
     : QDialog(parent)
     , m_api(api)
 {
-    setWindowTitle(tr("Socibiz POS — Sign in"));
+    setWindowTitle(tr("Zeebroo POS — Sign in"));
     setModal(true);
     resize(440, 320);
 
     Config::instance().load();
 
     auto *layout = new QVBoxLayout(this);
-    auto *heading = new QLabel(tr("<h2>Socibiz POS Desktop</h2><p>Connect to your Laravel POS API.</p>"), this);
+    auto *heading = new QLabel(tr("<h2>Zeebroo POS Desktop</h2><p>Connect to your Laravel POS API.</p>"), this);
     heading->setWordWrap(true);
     layout->addWidget(heading);
 

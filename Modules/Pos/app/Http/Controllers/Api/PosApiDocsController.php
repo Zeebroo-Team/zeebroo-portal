@@ -17,7 +17,7 @@ class PosApiDocsController extends Controller
             'specUrl' => $specUrl,
             'specJson' => $spec,
             'apiBaseUrl' => url('/api/v1/pos'),
-            'appName' => config('app.name', 'Socibiz'),
+            'appName' => config('app.name', 'Zeebroo'),
         ]);
     }
 

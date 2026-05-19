@@ -1382,7 +1382,7 @@ body.business-pro-avatar-modal-open{overflow:hidden;}
     if (btnBrandUpload) btnBrandUpload.addEventListener('click', function () { setOpen(true, 'upload'); });
     if (btnBrandCreator) btnBrandCreator.addEventListener('click', function () { setOpen(true, 'creator'); });
 
-    window.socibizOpenBusinessLogoModal = function (tab) {
+    window.zeebrooOpenBusinessLogoModal = function (tab) {
         setOpen(true, tab || 'upload');
     };
 
